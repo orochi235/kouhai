@@ -67,7 +67,9 @@ export function MessageList({ items, selected, filter, text, searchRef, onText, 
                 >
                   <span className="mark" aria-label={state} />
                   <span className="meta">
-                    <span className={`kind ${q.kind}`}>{q.kind === 'task' ? 'task' : 'q'}</span>
+                    <span className={`kind kind-${q.kind}`}>
+                      {q.kind === 'task' ? 'task' : 'q'}
+                    </span>
                     {q.repo && <span className={`chip ${repoClass(q.repo)}`}>{q.repo}</span>}
                     {q.outcome && q.outcome !== 'answered' && q.outcome !== 'done' && (
                       <span className={`outcome ${q.outcome}`}>{q.outcome}</span>

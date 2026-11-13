@@ -100,7 +100,7 @@
   margin: 0 0 8px;
 }
 
-.question {
+.reader .headline {
   font-family: var(--serif-display);
   font-weight: 400;
   font-size: clamp(28px, 3.2vw, 40px);

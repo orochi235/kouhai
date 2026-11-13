@@ -86,7 +86,7 @@ export function Reader({ item: q, onArchive, onPin, onUnread, onReveal, onOpenPa
             <p className="re">{q.kind === 'task' ? 'You told it to' : 'You asked'}</p>
             {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}
           </div>
-          <h2 className="question">{q.text}</h2>
+          <h2 className="headline">{q.text}</h2>
           <dl className="postmark-block">
             {q.repo && (
               <div>

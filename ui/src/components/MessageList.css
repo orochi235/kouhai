@@ -207,7 +207,7 @@
   min-width: 4ch;
 }
 
-.kind.task {
+.kind.kind-task {
   color: var(--stamp);
 }
 
