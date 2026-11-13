@@ -11,14 +11,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "vite ui",
-    "build": "vite build ui",
+    "dev": "vite outlets/web",
+    "build": "vite build outlets/web",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p ui",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p outlets/web",
     "lint": "biome check .",
     "service:install": "scripts/install-service.sh",
     "service:uninstall": "scripts/uninstall-service.sh",
-    "menubar:install": "${PERCH:-perch} install"
+    "menubar:install": "${PERCH:-perch} install -C outlets/menubar"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.7",

@@ -1,27 +1,16 @@
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import http from 'node:http';
-import { extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { huedOf } from './hued.ts';
-import { menu } from './menu.ts';
-import { port } from './paths.ts';
-import { Store } from './store.ts';
-import { FILTERS, type Filter, type Item } from './types.ts';
+import { port } from '../engine/paths.ts';
+import { repos } from '../engine/repos.ts';
+import { Store } from '../engine/store.ts';
+import { FILTERS, type Filter } from '../engine/types.ts';
+import type { Handler, Outlet } from './outlet.ts';
+import { serveStatic } from './static.ts';
 
-const DIST = fileURLToPath(new URL('../ui/dist/', import.meta.url));
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.woff2': 'font/woff2',
-  '.woff': 'font/woff',
-  '.json': 'application/json',
-};
+/** How often the server checks the store for changes to push; writers are other processes. */
+const WATCH_MS = 500;
 
 export class HttpError extends Error {
   status: number;
@@ -29,27 +18,6 @@ export class HttpError extends Error {
     super(message);
     this.status = status;
   }
-}
-
-type Handler = (q: URLSearchParams, body: Record<string, unknown>) => unknown;
-
-/** Every repo with an item in the ledger, with its .hued colors, for the sidebar. */
-export function repos(all: Item[]) {
-  const by = new Map<
-    string,
-    { repo: string; root: string | null; unread: number; owed: number; total: number }
-  >();
-  for (const q of all) {
-    if (!q.repo) continue;
-    const r = by.get(q.repo) ?? { repo: q.repo, root: q.root, unread: 0, owed: 0, total: 0 };
-    r.total++;
-    if (q.outcome && !q.readAt) r.unread++;
-    if (!q.outcome) r.owed++;
-    by.set(q.repo, r);
-  }
-  return [...by.values()]
-    .sort((a, b) => b.unread + b.owed - (a.unread + a.owed) || a.repo.localeCompare(b.repo))
-    .map((r) => ({ ...r, hued: r.root ? huedOf(r.root) : null }));
 }
 
 /**
@@ -64,6 +32,7 @@ export function notePath(note: string | null, raw: unknown): string | null {
   return existsSync(path) ? path : null;
 }
 
+/** The ledger API every outlet uses. Nothing here decides how anything looks. */
 export function routes(store: Store): Record<string, Handler> {
   const need = (id: unknown) => {
     if (typeof id !== 'string' && typeof id !== 'number')
@@ -77,6 +46,7 @@ export function routes(store: Store): Record<string, Handler> {
     'GET /api/items': (q) => {
       const f = (q.get('filter') ?? 'inbox') as Filter;
       if (!FILTERS.includes(f)) throw new HttpError(400, `filter is one of ${FILTERS.join(', ')}`);
+      const limit = q.get('limit');
       return {
         version: store.version(),
         counts: store.counts(),
@@ -84,6 +54,7 @@ export function routes(store: Store): Record<string, Handler> {
         items: store.list(f, {
           repo: q.get('repo') ?? undefined,
           text: q.get('text') ?? undefined,
+          limit: limit ? Math.min(500, Math.max(1, Number(limit) || 1)) : undefined,
         }),
       };
     },
@@ -94,7 +65,7 @@ export function routes(store: Store): Record<string, Handler> {
     'POST /api/read-all': () => ({ marked: store.readAll() }),
     'POST /api/reveal': (_q, b) => {
       const q = need(b.id);
-      // Only a path some answer attached, so the page can't be used to open arbitrary files.
+      // Only a path an item attached, so no outlet can open arbitrary files.
       const a = q.attachments.find(
         (x) => x.ref === b.ref && (x.kind === 'file' || x.kind === 'transom'),
       );
@@ -109,35 +80,64 @@ export function routes(store: Store): Record<string, Handler> {
       execFile('open', [path]);
       return { opened: path };
     },
-    'GET /api/menu': () =>
-      menu(store.counts(), store.list('unread', { limit: 8 }), store.list('owed', { limit: 8 })),
   };
 }
 
-function serveStatic(path: string, res: http.ServerResponse) {
-  const rel = normalize(decodeURIComponent(path)).replace(/^(\.\.[/\\])+/, '');
-  let file = join(DIST, rel);
-  if (!file.startsWith(DIST) || !existsSync(file) || rel === '/' || !extname(file)) {
-    file = join(DIST, 'index.html');
-  }
-  if (!existsSync(file)) {
-    res.writeHead(503, { 'content-type': 'text/plain' });
-    res.end('The inbox page is not built: npm run build in ~/src/dixeram');
-    return;
-  }
-  res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
-  res.end(readFileSync(file));
+/** `GET /api/events`: a server-sent `change` event, carrying the new version, whenever the ledger changes. */
+function events(store: Store) {
+  const clients = new Set<http.ServerResponse>();
+  let last = store.version();
+  const timer = setInterval(() => {
+    if (!clients.size) return;
+    const v = store.version();
+    if (v === last) return;
+    last = v;
+    for (const res of clients)
+      res.write(`event: change\ndata: ${JSON.stringify({ version: v })}\n\n`);
+  }, WATCH_MS);
+  timer.unref();
+  return (req: http.IncomingMessage, res: http.ServerResponse) => {
+    res.writeHead(200, {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-store',
+      connection: 'keep-alive',
+    });
+    last = store.version();
+    res.write(`event: change\ndata: ${JSON.stringify({ version: last })}\n\n`);
+    clients.add(res);
+    req.on('close', () => clients.delete(res));
+  };
 }
 
-export function createServer(store: Store) {
-  const table = routes(store);
+export function createServer(store: Store, outlets: Outlet[] = []) {
+  const table: Record<string, Handler> = { ...routes(store) };
+  for (const o of outlets) {
+    for (const [key, h] of Object.entries(o.routes?.(store) ?? {})) {
+      const [method, path] = key.split(' ');
+      table[`${method} /outlets/${o.name}${path}`] = h;
+    }
+  }
+  // Longest mount first, so `/overlay` wins over `/`.
+  const mounts = outlets
+    .flatMap((o) => (o.static ? [{ name: o.name, ...o.static }] : []))
+    .sort((a, b) => b.mount.length - a.mount.length);
+  const stream = events(store);
+
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const key = `${req.method} ${url.pathname}`;
+    if (key === 'GET /api/events') return stream(req, res);
     const handler = table[key];
     if (!handler) {
-      if (req.method === 'GET' && !url.pathname.startsWith('/api/'))
-        return serveStatic(url.pathname, res);
+      const mount = mounts.find((m) => url.pathname.startsWith(m.mount));
+      if (req.method === 'GET' && mount && !url.pathname.startsWith('/api/')) {
+        return serveStatic(
+          mount.dir,
+          mount.name,
+          url.pathname.slice(mount.mount.length - 1) || '/',
+          res,
+        );
+      }
       res.writeHead(404, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: `no route ${key}` }));
       return;
@@ -166,7 +166,7 @@ export function createServer(store: Store) {
   });
 }
 
-export function runDaemon(): void {
+export function runDaemon(outlets: Outlet[]): void {
   const store = new Store();
   const prune = () => {
     const n = store.prune();
@@ -174,7 +174,9 @@ export function runDaemon(): void {
   };
   prune();
   setInterval(prune, DAY_MS).unref();
-  createServer(store).listen(port(), '::', () => {
-    console.log(`dixeram inbox on http://localhost:${port()}`);
+  createServer(store, outlets).listen(port(), '::', () => {
+    console.log(
+      `dixeram on http://localhost:${port()}, outlets: ${outlets.map((o) => o.name).join(', ')}`,
+    );
   });
 }

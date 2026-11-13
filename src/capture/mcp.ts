@@ -1,9 +1,8 @@
 // A stdio MCP server with no dependencies: newline-delimited JSON-RPC, the methods Claude Code calls.
 import { createInterface } from 'node:readline';
-import { contextOf } from './context.ts';
-import { RULE } from './hooks.ts';
-import { apiBase } from './paths.ts';
-import type { Store } from './store.ts';
+import { contextOf } from '../engine/context.ts';
+import { apiBase } from '../engine/paths.ts';
+import type { Store } from '../engine/store.ts';
 import {
   ATTACHMENT_KINDS,
   type Attachment,
@@ -12,7 +11,8 @@ import {
   type Kind,
   OUTCOMES,
   type Outcome,
-} from './types.ts';
+} from '../engine/types.ts';
+import { RULE } from './hooks.ts';
 
 const VERSION = '0.3.0';
 

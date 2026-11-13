@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
-import { runDaemon } from './daemon.ts';
-import { type Payload, promptHook, sessionStartHook, stopHook } from './hooks.ts';
-import { serve } from './mcp.ts';
-import { ARCHIVE_TTL_MS, port } from './paths.ts';
-import { idOf, Store } from './store.ts';
-import { FILTERS, type Filter, type Item } from './types.ts';
+import { menubar } from '../outlets/menubar/outlet.ts';
+import { web } from '../outlets/web/outlet.ts';
+import { type Payload, promptHook, sessionStartHook, stopHook } from './capture/hooks.ts';
+import { serve } from './capture/mcp.ts';
+import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
+import { idOf, Store } from './engine/store.ts';
+import { FILTERS, type Filter, type Item } from './engine/types.ts';
+import { runDaemon } from './server/server.ts';
 
 const USAGE = `dixeram: a ledger of what Claude sessions owe you
 
@@ -45,7 +47,7 @@ async function main(argv: string[]) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
     case 'daemon':
-      return runDaemon();
+      return runDaemon([web, menubar]);
     case 'mcp':
       return serve(new Store());
     case 'hook': {

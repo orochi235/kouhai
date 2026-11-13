@@ -1,5 +1,5 @@
-import { port } from './paths.ts';
-import type { Item } from './types.ts';
+import { port } from '../../src/engine/paths.ts';
+import type { Item } from '../../src/engine/types.ts';
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

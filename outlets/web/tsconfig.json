@@ -11,7 +11,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "types": ["vite/client"],
-    "paths": { "@core/*": ["../src/*"] }
+    "paths": { "@core/*": ["../../src/engine/*"] }
   },
   "include": ["src", "vite.config.ts"]
 }

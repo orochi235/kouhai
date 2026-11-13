@@ -15,7 +15,7 @@ watch:
   daemon:
     launchagent: dev.dixeram
   m:
-    http: http://127.0.0.1:8771/api/menu
+    http: http://127.0.0.1:8771/outlets/menubar/menu
     json: true
     shape:
       title: string

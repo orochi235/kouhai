@@ -1,7 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createServer, notePath } from './daemon.ts';
-import { Store } from './store.ts';
+import { Store } from '../engine/store.ts';
+import { createServer, notePath } from './server.ts';
 
 const ctx = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
 let close = () => {};
@@ -50,5 +50,38 @@ describe('notePath', () => {
     expect(notePath(note, '/etc/passwd')).toBeNull();
     expect(notePath(`[x](/nope/missing.ts)`, '/nope/missing.ts')).toBeNull();
     expect(notePath(note, 'relative/path.ts')).toBeNull();
+  });
+});
+
+describe('outlets', () => {
+  it('mounts an outlet route under its name, reading the ledger', async () => {
+    const s = new Store(':memory:');
+    s.take([{ kind: 'task', text: 'bump' }], null, ctx);
+    const server = createServer(s, [
+      { name: 'probe', routes: (l) => ({ 'GET /owed': () => ({ n: l.counts().owed }) }) },
+    ]);
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    close = () => server.close();
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    expect(await fetch(`${base}/outlets/probe/owed`).then((r) => r.json())).toEqual({ n: 1 });
+    expect((await fetch(`${base}/api/menu`)).status).toBe(404);
+  });
+
+  it('pushes a change event when the ledger changes', async () => {
+    const s = new Store(':memory:');
+    const server = createServer(s);
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const ac = new AbortController();
+    close = () => {
+      ac.abort();
+      server.close();
+    };
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const res = await fetch(`${base}/api/events`, { signal: ac.signal });
+    const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+    const next = async () => new TextDecoder().decode((await reader.read()).value);
+    expect(await next()).toContain('event: change');
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx);
+    expect(await next()).toContain(s.version());
   });
 });

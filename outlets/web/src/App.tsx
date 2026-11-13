@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, type Filter, type Item, type Listing } from './api.ts';
+import { api, type Filter, type Item, type Listing, watch } from './api.ts';
 import './App.css';
 import { MessageList } from './components/MessageList.tsx';
 import { Reader } from './components/Reader.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { repoSheet } from './repoColors.ts';
-
-const POLL_MS = 2000;
 
 const initialRef = () => new URLSearchParams(location.search).get('q');
 
@@ -35,18 +33,16 @@ export function App() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    const t = setInterval(async () => {
-      try {
-        const { version: v } = await api.version();
-        setOffline(false);
-        if (v !== version.current) load();
-      } catch {
-        setOffline(true);
-      }
-    }, POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  useEffect(
+    () =>
+      watch(
+        (v) => {
+          if (v !== version.current) load();
+        },
+        (up) => setOffline(!up),
+      ),
+    [load],
+  );
 
   const items = listing?.items ?? [];
   const current = useMemo(() => items.find((q) => q.ref === selected) ?? null, [items, selected]);

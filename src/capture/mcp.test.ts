@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { Store } from '../engine/store.ts';
 import { handle } from './mcp.ts';
-import { Store } from './store.ts';
 
 const fb = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
 

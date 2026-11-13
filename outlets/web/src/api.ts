@@ -1,15 +1,9 @@
 import type { Filter, Item } from '@core/types.ts';
 
+export type { RepoSummary as Repo } from '@core/repos.ts';
 export type { Attachment, Filter, Item, Outcome } from '@core/types.ts';
 
-export type Repo = {
-  repo: string;
-  root: string | null;
-  unread: number;
-  owed: number;
-  total: number;
-  hued: { bg: string; fg: string; icon: string } | null;
-};
+import type { RepoSummary as Repo } from '@core/repos.ts';
 
 export type Listing = {
   version: string;
@@ -30,9 +24,19 @@ export const api = {
     if (text) q.set('text', text);
     return fetch(`/api/items?${q}`).then((r) => json<Listing>(r));
   },
-  version: () => fetch('/api/version').then((r) => json<{ version: string }>(r)),
   post: (path: 'read' | 'archive' | 'pin' | 'read-all' | 'reveal' | 'open-path', body: object) =>
     fetch(`/api/${path}`, { method: 'POST', body: JSON.stringify(body) }).then((r) =>
       json<unknown>(r),
     ),
 };
+
+/** Calls `onChange` whenever the ledger changes, and `onLink` as the connection drops or returns. */
+export function watch(onChange: (version: string) => void, onLink: (up: boolean) => void) {
+  const es = new EventSource('/api/events');
+  es.addEventListener('change', (e) => {
+    onLink(true);
+    onChange(JSON.parse((e as MessageEvent).data).version);
+  });
+  es.onerror = () => onLink(false);
+  return () => es.close();
+}

@@ -1,9 +1,9 @@
-import { contextOf } from './context.ts';
-import { detect } from './detect.ts';
-import { NAG_WINDOW_MS } from './paths.ts';
-import type { Store } from './store.ts';
-import { unledgeredMidTurn } from './transcript.ts';
-import type { Item } from './types.ts';
+import { contextOf } from '../engine/context.ts';
+import { detect } from '../engine/detect.ts';
+import { NAG_WINDOW_MS } from '../engine/paths.ts';
+import type { Store } from '../engine/store.ts';
+import { unledgeredMidTurn } from '../engine/transcript.ts';
+import type { Item } from '../engine/types.ts';
 
 export type Payload = Record<string, unknown>;
 export type HookOutput = Record<string, unknown> | null;

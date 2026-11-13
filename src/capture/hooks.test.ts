@@ -2,8 +2,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { Store } from '../engine/store.ts';
 import { promptHook, sessionStartHook, stopHook } from './hooks.ts';
-import { Store } from './store.ts';
 
 const payload = (prompt: string) => ({
   session_id: 's1',
