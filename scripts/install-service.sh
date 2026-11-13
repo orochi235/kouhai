@@ -16,6 +16,7 @@ ln -sf "$ROOT/bin/dixeram" "$HOME/.local/bin/dixeram"
 
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 
+# Not ProcessType Background: launchd throttles that so hard the daemon takes ~20 s to listen.
 cat > "$PLIST" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -31,7 +32,7 @@ cat > "$PLIST" <<PLIST_EOF
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
-  <key>ProcessType</key><string>Background</string>
+  <key>Nice</key><integer>5</integer>
   <key>StandardOutPath</key><string>$HOME_DIR/daemon.log</string>
   <key>StandardErrorPath</key><string>$HOME_DIR/daemon.log</string>
 </dict>
