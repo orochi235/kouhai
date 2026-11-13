@@ -56,3 +56,26 @@ describe('stopHook', () => {
     expect(stopHook(s, { session_id: 's1' })).toBeNull();
   });
 });
+
+describe('sessionStartHook', () => {
+  it('names unread answers from this repo on startup only', async () => {
+    const { sessionStartHook } = await import('./hooks.ts');
+    const s = new Store(':memory:');
+    const ctx = {
+      session: 'old',
+      harness: null,
+      cwd: '/x/dixeram',
+      root: '/x/dixeram',
+      repo: 'dixeram',
+      transcript: null,
+    };
+    s.ask(['why?'], null, ctx);
+    s.answer('q-1', 'because');
+    const p = { source: 'startup', cwd: '/x/dixeram' };
+    const out = sessionStartHook(s, p) as { hookSpecificOutput: { additionalContext: string } };
+    expect(out.hookSpecificOutput.additionalContext).toContain('q-1');
+    expect(sessionStartHook(s, { ...p, source: 'clear' })).toBeNull();
+    s.setRead('q-1');
+    expect(sessionStartHook(s, p)).toBeNull();
+  });
+});

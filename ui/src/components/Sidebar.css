@@ -89,7 +89,7 @@
 
 .filters button.active .count,
 .repos button.active .count {
-  color: var(--amber);
+  color: inherit;
 }
 
 .filters button > span:first-child,

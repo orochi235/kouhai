@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { runDaemon } from './daemon.ts';
-import { type Payload, promptHook, stopHook } from './hooks.ts';
+import { type Payload, promptHook, sessionStartHook, stopHook } from './hooks.ts';
 import { serve } from './mcp.ts';
-import { port } from './paths.ts';
+import { ARCHIVE_TTL_MS, port } from './paths.ts';
 import { idOf, Store } from './store.ts';
 import { FILTERS, type Filter, type Question } from './types.ts';
 
@@ -12,11 +12,11 @@ const USAGE = `dixeram: an inbox for the questions you ask Claude
   dixeram show <q-id>                print one question and its answer
   dixeram read <q-id>...             mark answers read
   dixeram open [q-id]                open the inbox page
-  dixeram prune                      delete answers archived over 180 days ago
+  dixeram prune                      delete answers archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
   dixeram daemon                     serve the inbox page on :${port()}
   dixeram mcp                        the MCP server Claude Code starts
-  dixeram hook prompt|stop           the hooks Claude Code runs`;
+  dixeram hook prompt|stop|session-start  the hooks Claude Code runs`;
 
 async function stdin(): Promise<Payload> {
   let raw = '';
@@ -57,7 +57,9 @@ async function main(argv: string[]) {
             ? promptHook(store, p, process.env.CLAUDE_CONFIG_DIR)
             : rest[0] === 'stop'
               ? stopHook(store, p)
-              : null;
+              : rest[0] === 'session-start'
+                ? sessionStartHook(store, p)
+                : null;
         if (out) process.stdout.write(`${JSON.stringify(out)}\n`);
       } finally {
         store.close();

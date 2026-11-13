@@ -1,0 +1,68 @@
+# The dixeram menu bar item: the unread count, and the latest unread answers. `perch install`
+# from this directory builds it and hands it to launchd. Every line it shows is worded by the
+# daemon (src/menu.ts).
+
+app:
+  name: dixeram
+  id: dev.dixeram.menubar
+  icon: tray.full
+  interval: 5s
+  gutter: false
+  # .hued's background.
+  tint: { color: "#f2b632", style: chip, wrap: all, menu: true, opacity: 0.85 }
+
+watch:
+  daemon:
+    launchagent: dev.dixeram
+  m:
+    http: http://127.0.0.1:8771/api/menu
+    json: true
+    shape:
+      title: string
+      unread: int
+      waiting: int
+      waitingText: string
+      inbox: string
+      rows: [{ id: string, text: string, repo: string, url: string }]
+
+state:
+  - uninstalled: "!daemon.installed"
+  - stopped: "!daemon.loaded"
+  - wedged: "!m.ok"
+  - up:
+
+status:
+  - when: wedged
+    icon: exclamationmark.triangle
+  - when: "uninstalled || stopped || (up && m.data.unread == 0)"
+    dim: true
+  - badge: "up && m.data.unread > 0 ? string(m.data.unread) : ''"
+
+menu:
+  - text: "{{m.data.title}}"
+    when: up
+  - text: "{{m.data.waitingText}}"
+    when: "up && m.data.waiting > 0"
+  - text: "The daemon is not installed — npm run service:install in ~/src/dixeram"
+    when: uninstalled
+  - text: "The daemon is installed but not loaded"
+    when: stopped
+  - text: "⚠ the daemon is not answering on :8771"
+    when: wedged
+  - separator
+  - each: m.data.rows
+    when: up
+    text: "{{it.text}}"
+    open: "{{it.url}}"
+  - separator
+  - text: Open inbox
+    when: up
+    open: "{{m.data.inbox}}"
+  - text: Mark all read
+    when: "up && m.data.unread > 0"
+    post: { url: "http://127.0.0.1:8771/api/read-all", body: {} }
+  - text: Start the daemon
+    when: stopped
+    agent: daemon.start
+  - separator
+  - { text: Quit dixeram, quit: true }

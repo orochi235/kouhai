@@ -250,6 +250,16 @@
   min-width: 9ch;
 }
 
+.enclosures .path,
+.enclosures a {
+  flex: 1;
+  min-width: 0;
+}
+
+.enclosures .quiet {
+  white-space: nowrap;
+}
+
 .enclosures a {
   color: var(--ink);
   overflow-wrap: anywhere;

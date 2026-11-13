@@ -28,7 +28,7 @@ describe('mcp', () => {
 
   it('asks and answers with attachments, dropping malformed ones', () => {
     const s = new Store(':memory:');
-    expect(call(s, 'ask', { questions: ['why?'] }).result.content[0]?.text).toBe('q-1: why?');
+    expect(call(s, 'ask', { questions: ['why?'] }).result.content[0]?.text).toContain('q-1: why?');
     const r = call(s, 'answer', {
       id: 'q-1',
       answer: 'because',

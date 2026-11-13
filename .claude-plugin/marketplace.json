@@ -6,8 +6,8 @@
     {
       "name": "dixeram",
       "description": "Tracks the direct questions you ask Claude mid-task and delivers the answers to an inbox",
-      "version": "0.1.0",
-      "source": "./"
+      "version": "0.2.1",
+      "source": "./plugin"
     }
   ]
 }

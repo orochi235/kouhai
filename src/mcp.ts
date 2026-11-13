@@ -1,10 +1,11 @@
 // A stdio MCP server with no dependencies: newline-delimited JSON-RPC, the three methods Claude Code calls.
 import { createInterface } from 'node:readline';
 import { contextOf } from './context.ts';
+import { apiBase } from './paths.ts';
 import type { Store } from './store.ts';
 import { ATTACHMENT_KINDS, type Attachment, type Context } from './types.ts';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.1';
 
 const INSTRUCTIONS =
   "dixeram keeps the user's direct questions and your answers in an inbox they read later, so an answer " +
@@ -97,7 +98,11 @@ export function callTool(
     if (!qs.length) return text('`questions` needs at least one question.', true);
     const turn = typeof args.turn === 'string' ? args.turn : null;
     const recorded = store.ask(qs as string[], turn, fallback);
-    return text(recorded.map((q) => `${q.ref}: ${q.question}`).join('\n'));
+    return text(
+      `Filed ${recorded.length === 1 ? 'one question' : `${recorded.length} questions`} in the dixeram inbox:\n` +
+        recorded.map((q) => `${q.ref}: ${q.question}`).join('\n') +
+        '\nTell the user in one line what you filed, then answer each with `answer`.',
+    );
   }
   if (name === 'answer') {
     if (typeof args.id !== 'string' && typeof args.id !== 'number')
@@ -106,7 +111,11 @@ export function callTool(
       return text('`answer` is required.', true);
     const q = store.answer(args.id, args.answer, attachmentsOf(args.attachments));
     if (!q) return text(`No question ${args.id}.`, true);
-    return text(`${q.ref} answered; it is in the inbox.`);
+    return text(
+      `${q.ref} delivered to the inbox (${apiBase().replace('127.0.0.1', 'localhost')}/?q=${q.ref})` +
+        (q.attachments.length ? ` with ${q.attachments.length} enclosed` : '') +
+        '. End your answer in chat with its id.',
+    );
   }
   return text(`Unknown tool ${name}.`, true);
 }
