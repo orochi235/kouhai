@@ -42,7 +42,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            let r = MResult(Watcher.http("http://127.0.0.1:8771/api/menu"))
+            let r = MResult(Watcher.http("http://127.0.0.1:8771/outlets/menubar/menu"))
             sync.async {
                 next.m = r
                 group.leave()

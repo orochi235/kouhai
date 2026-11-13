@@ -33,6 +33,27 @@ On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `/` search. 
 item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
 daemon opens only absolute paths that note itself links.
 
+## Layers
+
+| Layer   | Where         | Job                                                                        |
+| ------- | ------------- | -------------------------------------------------------------------------- |
+| engine  | `src/engine`  | the ledger: items, turns, the store, repo summaries                        |
+| capture | `src/capture` | the Claude Code side: hooks and the MCP server, writing the store directly |
+| server  | `src/server`  | the HTTP API, a server-sent event stream, and outlet mounting              |
+| outlets | `outlets/*`   | ways of showing the ledger: `web` (the page at `/`) and `menubar`          |
+
+An outlet is a module exporting an `Outlet` (`src/server/outlet.ts`), added to the list in
+`src/cli.ts`. It can serve built files at a mount point and add routes under
+`/outlets/<name>/`, which get read-only ledger queries; anything else it needs comes from the
+API. A browser outlet such as a stream overlay needs only the API:
+
+| Endpoint                                                      | Gives                                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /api/items?filter=owed&repo=&text=&limit=`               | items, counts, and per-repo summaries                               |
+| `GET /api/item?id=t-18`                                       | one item                                                            |
+| `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
+| `POST /api/read`, `/api/archive`, `/api/pin`, `/api/read-all` | `{ id, read \| archived \| pinned }`                                |
+
 ## Install
 
 ```sh
