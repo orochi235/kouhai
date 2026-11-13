@@ -1,8 +1,8 @@
 {
   "name": "dixeram",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
-  "description": "An inbox for the questions you ask Claude Code mid-task, and their answers",
+  "description": "A ledger of what Claude Code sessions owe you: questions and pending instructions",
   "type": "module",
   "bin": {
     "dixeram": "bin/dixeram"

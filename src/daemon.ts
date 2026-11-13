@@ -52,6 +52,18 @@ export function repos(all: Item[]) {
     .map((r) => ({ ...r, hued: r.root ? huedOf(r.root) : null }));
 }
 
+/**
+ * A local path the page may open: absolute, linked from the item's own note, and present on disk.
+ * A `:line` suffix is dropped. Anything else is refused, so the page can't open arbitrary files.
+ */
+export function notePath(note: string | null, raw: unknown): string | null {
+  if (!note || typeof raw !== 'string') return null;
+  const path = decodeURI(raw.replace(/^file:\/\//, '')).replace(/:\d+(:\d+)?$/, '');
+  if (!path.startsWith('/') || path.includes('/../')) return null;
+  if (!note.includes(path)) return null;
+  return existsSync(path) ? path : null;
+}
+
 export function routes(store: Store): Record<string, Handler> {
   const need = (id: unknown) => {
     if (typeof id !== 'string' && typeof id !== 'number')
@@ -89,6 +101,13 @@ export function routes(store: Store): Record<string, Handler> {
       if (!a) throw new HttpError(404, 'no such attachment');
       execFile('open', ['-R', a.ref]);
       return { revealed: a.ref };
+    },
+    'POST /api/open-path': (_q, b) => {
+      const q = need(b.id);
+      const path = notePath(q.note, b.path);
+      if (!path) throw new HttpError(404, 'that path is not linked from this note');
+      execFile('open', [path]);
+      return { opened: path };
     },
     'GET /api/menu': () =>
       menu(store.counts(), store.list('unread', { limit: 8 }), store.list('owed', { limit: 8 })),

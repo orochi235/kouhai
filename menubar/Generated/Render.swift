@@ -62,7 +62,7 @@ func renderFace(_ results: Results) -> Face {
     var face = Face(icon: MenuIcon.symbol("tray.full"), tint: Tint(color: Prefs.tint(or: "#f2b632"), alpha: 0.85, style: .chip, size: .small, corner: .bottomRight, wrap: .all, menu: true))
     if results.state_wedged {
         face.icon = MenuIcon.symbol("exclamationmark.triangle")
-    } else if ((results.state_uninstalled || results.state_stopped) || (results.state_up && (results.m.data.unread == 0))) {
+    } else if ((results.state_uninstalled || results.state_stopped) || ((results.state_up && (results.m.data.unread == 0)) && (results.m.data.owed == 0))) {
         face.dim = true
     } else {
         face.badge = ((results.state_up && (results.m.data.unread > 0)) ? String(results.m.data.unread) : "")
@@ -74,9 +74,6 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     var menu: [MenuNode] = []
     if results.state_up {
         menu.append(.item("\(results.m.data.title)", nil))
-    }
-    if (results.state_up && (results.m.data.waiting > 0)) {
-        menu.append(.item("\(results.m.data.waitingText)", nil))
     }
     if results.state_uninstalled {
         menu.append(.item("The daemon is not installed — npm run service:install in ~/src/dixeram", nil))
@@ -91,6 +88,15 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     for it1 in results.m.data.rows {
         if results.state_up {
             menu.append(.item("\(it1.text)", .open("\(it1.url)")))
+        }
+    }
+    menu.append(.separator)
+    if (results.state_up && (results.m.data.owed > 0)) {
+        menu.append(.item("\(results.m.data.owedText)", nil))
+    }
+    for it2 in results.m.data.owedRows {
+        if results.state_up {
+            menu.append(.item("\(it2.text)", .open("\(it2.url)"), look: Look(icon: MenuIcon.colored("circle.dashed", fg: "gray", bg: ""))))
         }
     }
     menu.append(.separator)

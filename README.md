@@ -1,30 +1,42 @@
 # dixeram
 
-An inbox for the questions you ask Claude Code in the middle of other work. When a prompt asks
-Claude something directly, the question and Claude's answer land in a local inbox page, with
-the repo, the session, and the prompt they came from. Claude still answers in chat as usual.
+A ledger of what Claude Code sessions owe you: the direct questions you ask them mid-task, and
+the instructions they haven't carried out yet. Each item lands in a local page with the repo,
+the session, and the prompt it came from, and stays **owed** until the agent settles it.
+Claude still answers in chat as usual.
 
-## How a question gets there
+| Kind            | Filed when                                                                                                         | Settles as                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| question `q-17` | you ask Claude something directly                                                                                  | answered, dropped, deferred |
+| task `t-18`     | you give an instruction Claude won't finish this turn: queued behind other work, meant for later, or sent mid-turn | done, dropped, deferred     |
 
-| Step           | Piece                      | What happens                                                                                                                                                          |
-| -------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Prompt sent    | `UserPromptSubmit` hook    | A loose check (a `?`, a what/why/how…, or a leading `??` to force it) opens a _turn_ holding the prompt's context and tells Claude its id.                            |
-| Claude decides | MCP tool `ask`             | Claude records each real question, not requests worded as one, and gets back `q-17`.                                                                                  |
-| Claude answers | MCP tool `answer`          | Markdown written to stand alone, plus optional attachments: an artifact URL, a file, a link, a transom render. Answering again replaces the text and marks it unread. |
-| Turn ends      | `Stop` hook                | If a question from this session has no answer, the turn is held open once with "answer q-17 before stopping".                                                         |
-| Next session   | `SessionStart` hook        | Unread answers from this repo get mentioned in one line.                                                                                                              |
-| You read it    | `localhost:8771`, menu bar | An inbox grouped by repo, with an unread count in the menu bar.                                                                                                       |
+An instruction carried out in the same turn isn't filed; brainhouse already keeps the whole
+transcript. _Deferred_ means moved to another durable home (a TODO entry, an issue), and the note
+says where. Work still waiting on a later turn stays owed.
 
-Each stage says what it did in the transcript. The hooks print a `dixeram ▸` line, Claude says
-which ids it filed, and Claude ends each answer in chat with `(q-17 → inbox)`.
+## How an item gets there
 
-Keys on the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `/` search. Opening an
-answer marks it read. `?q=q-17` opens one directly.
+| Step           | Piece                      | What happens                                                                                                                                                                                                                                |
+| -------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prompt sent    | `UserPromptSubmit` hook    | Opens a _turn_ holding the prompt's context and tells Claude the filing rule and the turn id.                                                                                                                                               |
+| Claude files   | MCP tool `take`            | Claude files each question, and each task it won't finish now, getting back `q-17`, `t-18`.                                                                                                                                                 |
+| Claude settles | MCP tool `settle`          | An outcome and a markdown note written to stand alone, linking every file, commit, and issue it names, plus optional attachments (an artifact URL, a file, a link, a transom render). Settling again replaces the note and marks it unread. |
+| Turn ends      | `Stop` hook                | Holds the turn open once for items from this session still owed, and for messages you sent mid-turn that the ledger never heard about (they reach Claude without a prompt hook; the hook finds them in the transcript).                     |
+| Next session   | `SessionStart` hook        | Owed and unread items from this repo get mentioned in one line.                                                                                                                                                                             |
+| You read it    | `localhost:8771`, menu bar | The ledger by repo, with unread and owed counts in the menu bar.                                                                                                                                                                            |
+
+Each stage says what it did in the transcript: the hooks print a `dixeram ▸` line, Claude says
+what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list
+its own open items after a long stretch of work or a compaction.
+
+On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `/` search. Opening a settled
+item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
+daemon opens only absolute paths that note itself links.
 
 ## Install
 
 ```sh
-npm install && npm run build      # the inbox page
+npm install && npm run build      # the page
 npm run service:install           # LaunchAgent dev.dixeram on :8771, and `dixeram` on PATH
 npm run menubar:install           # the menu bar item (perch)
 claude plugin marketplace add ~/src/dixeram
@@ -32,13 +44,13 @@ claude plugin install dixeram@dixeram
 ```
 
 Run the last two once per Claude config directory (`CLAUDE_CONFIG_DIR=~/.claude-pw claude plugin …`).
-Every harness writes to the same inbox; each answer carries the harness it came from.
+Every harness writes to the same ledger; each item carries the harness it came from.
 
 ## CLI
 
 ```
-dixeram ls [inbox|unread|waiting|pinned|archived|all]
-dixeram show q-17
+dixeram ls [inbox|owed|unread|pinned|archived|all]
+dixeram show t-18
 dixeram read q-17
 dixeram open [q-17]
 dixeram prune
@@ -47,6 +59,6 @@ dixeram prune
 ## Storage
 
 `~/.dixeram/inbox.db`, SQLite in WAL mode, readable only by you. Attachments are stored as
-references, never copies. An archived answer is deleted 180 days after it was archived, unless
-pinned. A turn nobody asked a question from is deleted after two days. The daemon prunes on
-start and daily; `dixeram prune` does it now. The daemon logs to `~/.dixeram/daemon.log`.
+references, never copies. An archived item is deleted 180 days after it was archived, unless
+pinned. Turns and the record of chased mid-turn messages are deleted after two days. The daemon
+prunes on start and daily; `dixeram prune` does it now. The daemon logs to `~/.dixeram/daemon.log`.

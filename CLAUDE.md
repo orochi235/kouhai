@@ -1,6 +1,8 @@
 # dixeram — agent pointers
 
 - What it is and how it works: `README.md`. Open work: `docs/TODO.md`.
+- The filing rule Claude follows is written once, `RULE` in `src/hooks.ts`; the prompt hook and the
+  MCP server's instructions both use it. Change the rule there.
 - **Deployed from this checkout.** The plugin is only a shell: its hooks and MCP server run
   `dixeram` from `~/.local/bin`, a link to `bin/dixeram` here, so a change to `src/` reaches
   hooks and new sessions at once. The daemon needs a restart:

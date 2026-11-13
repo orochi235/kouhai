@@ -11,6 +11,7 @@ type Props = {
   onPin: (q: Item) => void;
   onUnread: (q: Item) => void;
   onReveal: (q: Item, ref: string) => void;
+  onOpenPath: (q: Item, path: string) => void;
 };
 
 const BRAINHOUSE = 'http://localhost:8765';
@@ -52,7 +53,7 @@ function Copy({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function Reader({ item: q, onArchive, onPin, onUnread, onReveal }: Props) {
+export function Reader({ item: q, onArchive, onPin, onUnread, onReveal, onOpenPath }: Props) {
   const html = useMemo(() => (q?.note ? render(q.note) : ''), [q?.note]);
   if (!q) {
     return (
@@ -121,7 +122,18 @@ export function Reader({ item: q, onArchive, onPin, onUnread, onReveal }: Props)
         </header>
 
         {q.note ? (
-          <div className="answer" dangerouslySetInnerHTML={{ __html: html }} />
+          <div
+            className="answer"
+            onClick={(e) => {
+              const a = (e.target as HTMLElement).closest('a');
+              const href = a?.getAttribute('href') ?? '';
+              if (href.startsWith('/') || href.startsWith('file://')) {
+                e.preventDefault();
+                onOpenPath(q, href);
+              }
+            }}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         ) : (
           <p className="answer pending">
             {q.kind === 'task'

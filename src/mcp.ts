@@ -52,7 +52,7 @@ const TOOLS = [
     name: 'settle',
     description:
       'Settle an item. A question settles as answered, a task as done; either can be dropped or ' +
-      'deferred. The note is markdown read away from this conversation: for an answer, lead with the ' +
+      'deferred (moved to another durable home: a TODO entry, an issue; say where). Work still waiting on a later turn is not deferred: leave it owed. The note is markdown, linked generously (files as markdown links to absolute paths; commits, PRs, issues, docs, and artifacts by URL), read away from this conversation: for an answer, lead with the ' +
       'answer and give the context needed; for a task, what was done (commits, files); for dropped or ' +
       'deferred, why, and where it went. Settling again replaces the note, keeps attachments, and marks ' +
       'it unread. Attach richer material (a claude.ai artifact URL, a file, a link) with `attachments`.',

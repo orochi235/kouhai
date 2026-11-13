@@ -31,7 +31,7 @@ export const api = {
     return fetch(`/api/items?${q}`).then((r) => json<Listing>(r));
   },
   version: () => fetch('/api/version').then((r) => json<{ version: string }>(r)),
-  post: (path: 'read' | 'archive' | 'pin' | 'read-all' | 'reveal', body: object) =>
+  post: (path: 'read' | 'archive' | 'pin' | 'read-all' | 'reveal' | 'open-path', body: object) =>
     fetch(`/api/${path}`, { method: 'POST', body: JSON.stringify(body) }).then((r) =>
       json<unknown>(r),
     ),

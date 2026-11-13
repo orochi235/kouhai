@@ -145,6 +145,7 @@ export function App() {
         onPin={(q) => act('pin', q, !q.pinned)}
         onUnread={(q) => act('read', q, !q.readAt)}
         onReveal={(q, ref) => api.post('reveal', { id: q.ref, ref })}
+        onOpenPath={(q, path) => api.post('open-path', { id: q.ref, path })}
       />
     </div>
   );

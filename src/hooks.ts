@@ -15,11 +15,15 @@ const refs = (items: Item[]) => items.map((i) => i.ref).join(', ');
 export const RULE =
   'File with the dixeram `take` tool: (1) every direct question the user asks you, kind "question"; ' +
   '(2) any instruction you will not finish before this turn ends, kind "task" (one queued behind ' +
-  'other work, or one that arrives mid-turn while you are busy). An instruction you carry out in ' +
-  'this turn needs no filing. Then `settle` each: a question as answered, a task as done, or either ' +
-  'as dropped or deferred, saying why. Say in one line what you filed ("Filed q-17, t-18."), and end ' +
-  'an answer in chat with its id ("(q-17 → inbox)"). Notes are read later, away from this ' +
-  'conversation, so make them stand on their own.';
+  'other work, one meant for later, or one that arrives mid-turn while you are busy). An instruction ' +
+  'you carry out in this turn needs no filing. A filed item stays owed until it is settled: a question ' +
+  'as answered, a task as done, either as dropped (with why), or as deferred, which means moved to ' +
+  'another durable home such as a TODO entry or an issue (say where). Work still waiting on a later ' +
+  'turn is owed, not deferred: leave it open. Say in one line what you filed ("Filed q-17, t-18."), and ' +
+  'end an answer in chat with its id ("(q-17 → inbox)"). Notes are read later, away from this ' +
+  'conversation, so make them stand on their own and link generously: every file you name as a ' +
+  'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
+  'issues, docs, and artifacts by URL.';
 
 export function promptHook(store: Store, p: Payload, configDir?: string): HookOutput {
   const prompt = typeof p.prompt === 'string' ? p.prompt : '';
@@ -72,7 +76,7 @@ export function stopHook(store: Store, p: Payload): HookOutput {
   }
   if (tasks.length) {
     parts.push(
-      `${tasks.map((t) => `${t.ref} ${quote(t.text)}`).join(', ')} ${tasks.length === 1 ? 'is' : 'are'} still owed: settle as done if it is, or dropped/deferred with why; if you are still on it, say so and leave it open.`,
+      `${tasks.map((t) => `${t.ref} ${quote(t.text)}`).join(', ')} ${tasks.length === 1 ? 'is' : 'are'} still owed. If one is done, settle it as done; if dropped or moved to a TODO or issue, settle it so. If it is still waiting, leave it open: that is what owed means.`,
     );
   }
   if (mid.length) {
