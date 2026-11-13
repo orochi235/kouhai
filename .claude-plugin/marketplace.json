@@ -1,0 +1,13 @@
+{
+  "name": "dixeram",
+  "description": "An inbox for the questions you ask Claude",
+  "owner": { "name": "Michael Baker", "email": "contact@michaelbaker.tech" },
+  "plugins": [
+    {
+      "name": "dixeram",
+      "description": "Tracks the direct questions you ask Claude mid-task and delivers the answers to an inbox",
+      "version": "0.1.0",
+      "source": "./"
+    }
+  ]
+}

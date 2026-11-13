@@ -1,0 +1,154 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--paper-rail) var(--grain);
+  border-right: 1px solid var(--rule);
+  padding: 22px 14px 14px;
+}
+
+.masthead {
+  position: relative;
+  padding: 0 8px 18px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.masthead h1 {
+  font-family: var(--serif-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+
+/* A cancellation mark: a double ring with wavy lines trailing off it. */
+.postmark {
+  position: absolute;
+  right: 22px;
+  top: -6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--stamp);
+  box-shadow:
+    inset 0 0 0 4px var(--paper-rail),
+    inset 0 0 0 5px var(--stamp);
+  opacity: 0.55;
+  transform: rotate(-14deg);
+}
+
+.postmark::after {
+  content: "";
+  position: absolute;
+  left: 36px;
+  top: 10px;
+  width: 22px;
+  height: 16px;
+  background: repeating-linear-gradient(180deg, var(--stamp) 0 1.5px, transparent 1.5px 5px);
+}
+
+.filters,
+.repos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.filters button,
+.repos button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 3px;
+  text-align: left;
+  font-size: 15px;
+}
+
+.filters button:hover,
+.repos button:hover {
+  background: var(--select);
+}
+
+.filters button.active,
+.repos button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.filters button.active .count,
+.repos button.active .count {
+  color: var(--amber);
+}
+
+.filters button > span:first-child,
+.repos .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail-heading {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 22px 8px 6px;
+}
+
+.repos .name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--repo-bg, var(--rule));
+  box-shadow: 0 0 0 1px #0002;
+  flex: none;
+}
+
+.rail-foot {
+  margin-top: auto;
+  padding: 16px 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rail-foot .quiet {
+  margin-left: -8px;
+}
+
+.keys {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.9;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.offline {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--stamp);
+  margin: 0;
+}

@@ -1,0 +1,14 @@
+.app {
+  display: grid;
+  grid-template-columns: 228px minmax(300px, 400px) 1fr;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: minmax(260px, 40%) 1fr;
+  }
+  .app > .sidebar {
+    display: none;
+  }
+}

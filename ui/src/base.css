@@ -1,0 +1,116 @@
+:root {
+  --paper: #f4efe4;
+  --paper-rail: #ebe3d2;
+  --paper-sheet: #fbf8f1;
+  --ink: #1c1712;
+  --ink-soft: #5c5246;
+  --ink-faint: #8f8371;
+  --rule: #d8ccb4;
+  --stamp: #b0412e;
+  --amber: #f2b632;
+  --select: #efe4c9;
+  --shadow: 0 1px 0 #fff8 inset, 0 18px 40px -24px #3a2a1440;
+  --serif-display: "Instrument Serif", "Iowan Old Style", serif;
+  --serif: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1a1611;
+    --paper-rail: #13100c;
+    --paper-sheet: #211c16;
+    --ink: #ece4d4;
+    --ink-soft: #b3a68f;
+    --ink-faint: #7d7262;
+    --rule: #3a3226;
+    --stamp: #e2694e;
+    --select: #2c251c;
+    --shadow: 0 18px 40px -24px #000c;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--paper) var(--grain);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.quiet {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.quiet:hover {
+  color: var(--ink);
+  border-color: var(--rule);
+}
+
+.chip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px 0;
+  border-radius: 2px;
+  background: var(--repo-bg, var(--rule));
+  color: var(--repo-fg, var(--ink));
+}
+
+.count {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+.count.hot {
+  color: var(--stamp);
+  font-weight: 500;
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
+}
