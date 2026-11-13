@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, type Filter, type Listing, type Question } from './api.ts';
+import { api, type Filter, type Item, type Listing } from './api.ts';
 import './App.css';
 import { MessageList } from './components/MessageList.tsx';
 import { Reader } from './components/Reader.tsx';
@@ -48,11 +48,8 @@ export function App() {
     return () => clearInterval(t);
   }, [load]);
 
-  const questions = listing?.questions ?? [];
-  const current = useMemo(
-    () => questions.find((q) => q.ref === selected) ?? null,
-    [questions, selected],
-  );
+  const items = listing?.items ?? [];
+  const current = useMemo(() => items.find((q) => q.ref === selected) ?? null, [items, selected]);
 
   useEffect(() => {
     const url = new URL(location.href);
@@ -62,7 +59,7 @@ export function App() {
   }, [selected]);
 
   const act = useCallback(
-    async (path: 'read' | 'archive' | 'pin', q: Question, on: boolean) => {
+    async (path: 'read' | 'archive' | 'pin', q: Item, on: boolean) => {
       const key = path === 'read' ? 'read' : path === 'archive' ? 'archived' : 'pinned';
       await api.post(path, { id: q.ref, [key]: on });
       load();
@@ -70,11 +67,11 @@ export function App() {
     [load],
   );
 
-  // Opening an answer is reading it, once per answer, so `u` can mark it unread again.
+  // Opening a settled item is reading it, once per settlement, so `u` can mark it unread again.
   const autoRead = useRef('');
   useEffect(() => {
-    if (!current?.answer) return;
-    const key = `${current.ref}:${current.answeredAt}`;
+    if (!current?.outcome) return;
+    const key = `${current.ref}:${current.settledAt}`;
     if (key === autoRead.current) return;
     autoRead.current = key;
     if (!current.readAt) act('read', current, true);
@@ -82,12 +79,12 @@ export function App() {
 
   const move = useCallback(
     (step: number) => {
-      if (!questions.length) return;
-      const i = questions.findIndex((q) => q.ref === selected);
-      const next = questions[Math.min(questions.length - 1, Math.max(0, i + step))];
+      if (!items.length) return;
+      const i = items.findIndex((q) => q.ref === selected);
+      const next = items[Math.min(items.length - 1, Math.max(0, i + step))];
       if (next) setSelected(next.ref);
     },
-    [questions, selected],
+    [items, selected],
   );
 
   useEffect(() => {
@@ -134,7 +131,7 @@ export function App() {
         }}
       />
       <MessageList
-        questions={questions}
+        items={items}
         selected={selected}
         filter={filter}
         text={text}
@@ -143,7 +140,7 @@ export function App() {
         onSelect={setSelected}
       />
       <Reader
-        question={current}
+        item={current}
         onArchive={(q) => act('archive', q, !q.archivedAt)}
         onPin={(q) => act('pin', q, !q.pinned)}
         onUnread={(q) => act('read', q, !q.readAt)}

@@ -7,7 +7,7 @@ import { huedOf } from './hued.ts';
 import { menu } from './menu.ts';
 import { port } from './paths.ts';
 import { Store } from './store.ts';
-import { FILTERS, type Filter, type Question } from './types.ts';
+import { FILTERS, type Filter, type Item } from './types.ts';
 
 const DIST = fileURLToPath(new URL('../ui/dist/', import.meta.url));
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -33,21 +33,22 @@ export class HttpError extends Error {
 
 type Handler = (q: URLSearchParams, body: Record<string, unknown>) => unknown;
 
-/** Every repo that has a question, with its .hued colors, for the sidebar. */
-export function repos(all: Question[]) {
+/** Every repo with an item in the ledger, with its .hued colors, for the sidebar. */
+export function repos(all: Item[]) {
   const by = new Map<
     string,
-    { repo: string; root: string | null; unread: number; total: number }
+    { repo: string; root: string | null; unread: number; owed: number; total: number }
   >();
   for (const q of all) {
     if (!q.repo) continue;
-    const r = by.get(q.repo) ?? { repo: q.repo, root: q.root, unread: 0, total: 0 };
+    const r = by.get(q.repo) ?? { repo: q.repo, root: q.root, unread: 0, owed: 0, total: 0 };
     r.total++;
-    if (q.answer && !q.readAt) r.unread++;
+    if (q.outcome && !q.readAt) r.unread++;
+    if (!q.outcome) r.owed++;
     by.set(q.repo, r);
   }
   return [...by.values()]
-    .sort((a, b) => b.unread - a.unread || a.repo.localeCompare(b.repo))
+    .sort((a, b) => b.unread + b.owed - (a.unread + a.owed) || a.repo.localeCompare(b.repo))
     .map((r) => ({ ...r, hued: r.root ? huedOf(r.root) : null }));
 }
 
@@ -56,25 +57,25 @@ export function routes(store: Store): Record<string, Handler> {
     if (typeof id !== 'string' && typeof id !== 'number')
       throw new HttpError(400, 'id is required');
     const q = store.get(id);
-    if (!q) throw new HttpError(404, `no question ${id}`);
+    if (!q) throw new HttpError(404, `no item ${id}`);
     return q;
   };
   return {
     'GET /api/version': () => ({ version: store.version() }),
-    'GET /api/questions': (q) => {
+    'GET /api/items': (q) => {
       const f = (q.get('filter') ?? 'inbox') as Filter;
       if (!FILTERS.includes(f)) throw new HttpError(400, `filter is one of ${FILTERS.join(', ')}`);
       return {
         version: store.version(),
         counts: store.counts(),
         repos: repos(store.list('inbox')),
-        questions: store.list(f, {
+        items: store.list(f, {
           repo: q.get('repo') ?? undefined,
           text: q.get('text') ?? undefined,
         }),
       };
     },
-    'GET /api/question': (q) => need(q.get('id')),
+    'GET /api/item': (q) => need(q.get('id')),
     'POST /api/read': (_q, b) => store.setRead(need(b.id).id, b.read !== false),
     'POST /api/archive': (_q, b) => store.setArchived(need(b.id).id, b.archived !== false),
     'POST /api/pin': (_q, b) => store.setPinned(need(b.id).id, b.pinned !== false),
@@ -89,7 +90,8 @@ export function routes(store: Store): Record<string, Handler> {
       execFile('open', ['-R', a.ref]);
       return { revealed: a.ref };
     },
-    'GET /api/menu': () => menu(store.counts(), store.list('unread', { limit: 10 })),
+    'GET /api/menu': () =>
+      menu(store.counts(), store.list('unread', { limit: 8 }), store.list('owed', { limit: 8 })),
   };
 }
 
@@ -149,8 +151,7 @@ export function runDaemon(): void {
   const store = new Store();
   const prune = () => {
     const n = store.prune();
-    if (n.questions || n.turns)
-      console.log(`pruned ${n.questions} archived answers, ${n.turns} turns`);
+    if (n.items || n.turns) console.log(`pruned ${n.items} archived items, ${n.turns} turns`);
   };
   prune();
   setInterval(prune, DAY_MS).unref();

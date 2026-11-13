@@ -1,29 +1,28 @@
 import { port } from './paths.ts';
-import type { Question } from './types.ts';
+import type { Item } from './types.ts';
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** What the menu bar item shows. perch draws these strings verbatim. */
-export function menu(counts: { unread: number; waiting: number }, unread: Question[]) {
+export function menu(counts: { unread: number; owed: number }, unread: Item[], owed: Item[]) {
   const base = `http://localhost:${port()}`;
-  const title =
-    counts.unread === 0
-      ? 'No unread answers'
-      : `${counts.unread} unread ${counts.unread === 1 ? 'answer' : 'answers'}`;
+  const row = (i: Item) => ({
+    id: i.ref,
+    text: `${i.ref}  ${clip(i.text, 56)}`,
+    repo: i.repo ?? '',
+    url: `${base}/?q=${i.ref}`,
+  });
   return {
-    title,
+    title:
+      counts.unread === 0
+        ? 'Nothing unread'
+        : `${plural(counts.unread, 'settled item', 'settled items')} unread`,
     unread: counts.unread,
-    waiting: counts.waiting,
-    waitingText:
-      counts.waiting === 0
-        ? ''
-        : `${counts.waiting} ${counts.waiting === 1 ? 'question' : 'questions'} still being answered`,
+    owed: counts.owed,
+    owedText: counts.owed === 0 ? '' : `${plural(counts.owed, 'item', 'items')} still owed`,
     inbox: base,
-    rows: unread.map((q) => ({
-      id: q.ref,
-      text: clip(q.question, 60),
-      repo: q.repo ?? '',
-      url: `${base}/?q=${q.ref}`,
-    })),
+    rows: unread.map(row),
+    owedRows: owed.map(row),
   };
 }

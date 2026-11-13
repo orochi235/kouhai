@@ -4,15 +4,15 @@ import { type Payload, promptHook, sessionStartHook, stopHook } from './hooks.ts
 import { serve } from './mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './paths.ts';
 import { idOf, Store } from './store.ts';
-import { FILTERS, type Filter, type Question } from './types.ts';
+import { FILTERS, type Filter, type Item } from './types.ts';
 
-const USAGE = `dixeram: an inbox for the questions you ask Claude
+const USAGE = `dixeram: a ledger of what Claude sessions owe you
 
-  dixeram ls [${FILTERS.join('|')}]   list questions (default: unread)
-  dixeram show <q-id>                print one question and its answer
-  dixeram read <q-id>...             mark answers read
+  dixeram ls [${FILTERS.join('|')}]   list items (default: unread)
+  dixeram show <id>                  print one item and how it was settled
+  dixeram read <id>...               mark settled items read
   dixeram open [q-id]                open the inbox page
-  dixeram prune                      delete answers archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
+  dixeram prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
   dixeram daemon                     serve the inbox page on :${port()}
   dixeram mcp                        the MCP server Claude Code starts
@@ -36,9 +36,9 @@ const ago = (ms: number) => {
   return `${Math.round(s / 86400)}d`;
 };
 
-function line(q: Question): string {
-  const state = q.answer ? (q.readAt ? ' ' : '●') : '…';
-  return `${state} ${q.ref.padStart(6)}  ${ago(q.answeredAt ?? q.askedAt).padStart(4)}  ${(q.repo ?? '-').padEnd(14)}  ${q.question}`;
+function line(q: Item): string {
+  const state = q.outcome ? (q.readAt ? ' ' : '●') : '…';
+  return `${state} ${q.ref.padStart(6)}  ${(q.outcome ?? 'owed').padEnd(8)}  ${ago(q.settledAt ?? q.raisedAt).padStart(4)}  ${(q.repo ?? '-').padEnd(14)}  ${q.text}`;
 }
 
 async function main(argv: string[]) {
@@ -75,19 +75,19 @@ async function main(argv: string[]) {
     }
     case 'show': {
       const q = rest[0] ? new Store().get(rest[0]) : null;
-      if (!q) throw new Error(`no question ${rest[0] ?? ''}`);
+      if (!q) throw new Error(`no item ${rest[0] ?? ''}`);
       console.log(
-        `${q.ref} · ${q.repo ?? '-'} · ${q.harness ?? '-'} · asked ${ago(q.askedAt)} ago\n`,
+        `${q.ref} · ${q.repo ?? '-'} · ${q.harness ?? '-'} · ${q.kind} raised ${ago(q.raisedAt)} ago · ${q.outcome ?? 'owed'}\n`,
       );
-      console.log(`> ${q.question}\n`);
-      console.log(q.answer ?? '(not answered yet)');
+      console.log(`> ${q.text}\n`);
+      console.log(q.note ?? '(still owed)');
       for (const a of q.attachments)
         console.log(`\n[${a.kind}] ${a.label ? `${a.label}: ` : ''}${a.ref}`);
       return;
     }
     case 'read': {
       const store = new Store();
-      for (const r of rest) if (!store.setRead(r)) console.error(`no question ${r}`);
+      for (const r of rest) if (!store.setRead(r)) console.error(`no item ${r}`);
       return;
     }
     case 'open': {
@@ -97,7 +97,7 @@ async function main(argv: string[]) {
     }
     case 'prune': {
       const n = new Store().prune();
-      console.log(`deleted ${n.questions} archived answers and ${n.turns} stale turns`);
+      console.log(`deleted ${n.items} archived items and ${n.turns} stale turns`);
       return;
     }
     default:

@@ -21,11 +21,11 @@ async function up() {
 describe('daemon', () => {
   it('lists, marks read, and refuses to reveal a path nobody attached', async () => {
     const { s, base, post } = await up();
-    s.ask(['why?'], null, ctx);
-    s.answer('q-1', 'because', [{ kind: 'file', ref: '/tmp/x' }]);
-    const list = await fetch(`${base}/api/questions?filter=unread`).then((r) => r.json());
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx);
+    s.settle('q-1', 'answered', 'because', [{ kind: 'file', ref: '/tmp/x' }]);
+    const list = await fetch(`${base}/api/items?filter=unread`).then((r) => r.json());
     expect(list.counts.unread).toBe(1);
-    expect(list.repos[0]).toMatchObject({ repo: 'c', unread: 1 });
+    expect(list.repos[0]).toMatchObject({ repo: 'c', unread: 1, owed: 0 });
     await post('/api/read', { id: 'q-1' });
     expect(s.counts().unread).toBe(0);
     const r = await fetch(`${base}/api/reveal`, {
@@ -37,6 +37,6 @@ describe('daemon', () => {
 
   it('rejects an unknown filter', async () => {
     const { base } = await up();
-    expect((await fetch(`${base}/api/questions?filter=nope`)).status).toBe(400);
+    expect((await fetch(`${base}/api/items?filter=nope`)).status).toBe(400);
   });
 });

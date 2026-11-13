@@ -1,3 +1,7 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { ARCHIVE_TTL_MS, TURN_TTL_MS } from './paths.ts';
 import { Store } from './store.ts';
@@ -18,79 +22,116 @@ function store(start = 1_000_000) {
   return { s, tick: (ms = 1) => (t += ms) };
 }
 
+const q = (text: string) => ({ kind: 'question' as const, text });
+const t = (text: string) => ({ kind: 'task' as const, text });
+
 describe('Store', () => {
-  it('files questions under the turn that carried them', () => {
+  it('files items under the turn that carried them, numbering both kinds together', () => {
     const { s } = store();
-    const turn = s.addTurn(ctx, 'fix the build. also why is CI slow?');
-    const [q] = s.ask(['why is CI slow?'], turn.id, { ...ctx, session: 'other' });
-    expect(q?.ref).toBe('q-1');
-    expect(q?.session).toBe('s1');
-    expect(q?.prompt).toBe('fix the build. also why is CI slow?');
+    const turn = s.addTurn(ctx, 'fix the build. also why is CI slow? then bump deps');
+    const items = s.take([q('why is CI slow?'), t('bump deps')], turn.id, { ...ctx, session: 'x' });
+    expect(items.map((i) => i.ref)).toEqual(['q-1', 't-2']);
+    expect(items[0]?.session).toBe('s1');
+    expect(items[1]?.prompt).toContain('bump deps');
   });
 
   it('falls back to the caller context for an unknown turn', () => {
     const { s } = store();
-    const [q] = s.ask(['what?'], 't-nope', { ...ctx, session: 'fb' });
-    expect(q?.session).toBe('fb');
-    expect(q?.prompt).toBeNull();
+    const [i] = s.take([q('what?')], 'turn-nope', { ...ctx, session: 'fb' });
+    expect(i?.session).toBe('fb');
+    expect(i?.prompt).toBeNull();
   });
 
-  it('moves a question through unread, read, and archived', () => {
+  it('moves an item from owed to unread to read to archived', () => {
     const { s, tick } = store();
-    const [q] = s.ask(['how?'], null, ctx);
-    expect(s.counts()).toMatchObject({ unread: 0, waiting: 1 });
+    s.take([t('rename it')], null, ctx);
+    expect(s.counts()).toMatchObject({ unread: 0, owed: 1 });
     tick();
-    s.answer('q-1', 'like this', [{ kind: 'url', ref: 'https://x' }]);
-    expect(s.counts()).toMatchObject({ unread: 1, waiting: 0 });
-    s.setRead(q!.id);
+    s.settle('t-1', 'done', 'renamed in abc123', [{ kind: 'url', ref: 'https://x' }]);
+    expect(s.counts()).toMatchObject({ unread: 1, owed: 0 });
+    s.setRead('1');
     expect(s.list('unread')).toHaveLength(0);
-    s.setArchived('1');
+    s.setArchived('t-1');
     expect(s.list('inbox')).toHaveLength(0);
     expect(s.list('archived')).toHaveLength(1);
   });
 
-  it('re-answering replaces text, keeps attachments, and brings it back unread', () => {
+  it('refuses an outcome that does not fit the kind', () => {
     const { s } = store();
-    s.ask(['how?'], null, ctx);
-    s.answer('q-1', 'v1', [{ kind: 'file', ref: '/a' }]);
+    s.take([q('why?'), t('do it')], null, ctx);
+    expect(() => s.settle('q-1', 'done', 'x')).toThrow(/answered/);
+    expect(() => s.settle('t-2', 'answered', 'x')).toThrow(/done/);
+    expect(s.settle('t-2', 'dropped', 'superseded by t-3')?.outcome).toBe('dropped');
+  });
+
+  it('settling again replaces the note, keeps attachments, and brings it back unread', () => {
+    const { s } = store();
+    s.take([q('how?')], null, ctx);
+    s.settle('q-1', 'answered', 'v1', [{ kind: 'file', ref: '/a' }]);
     s.setRead('q-1');
     s.setArchived('q-1');
-    const q = s.answer('q-1', 'v2', [
-      { kind: 'file', ref: '/a' },
-      { kind: 'artifact', ref: 'https://c' },
-    ]);
-    expect(q?.answer).toBe('v2');
-    expect(q?.attachments.map((a) => a.ref)).toEqual(['/a', 'https://c']);
-    expect(q?.readAt).toBeNull();
-    expect(q?.archivedAt).toBeNull();
+    const i = s.settle('q-1', 'answered', 'v2', [{ kind: 'artifact', ref: 'https://c' }]);
+    expect(i?.note).toBe('v2');
+    expect(i?.attachments.map((a) => a.ref)).toEqual(['/a', 'https://c']);
+    expect(i?.readAt).toBeNull();
+    expect(i?.archivedAt).toBeNull();
   });
 
-  it('chases an unanswered question once', () => {
+  it('chases an owed item once, and a key once', () => {
     const { s } = store();
-    s.ask(['a?', 'b?'], null, ctx);
-    s.answer('q-2', 'b');
+    s.take([q('a?'), t('b')], null, ctx);
+    s.settle('q-1', 'answered', 'a');
     const open = s.unchased('s1', 0);
-    expect(open.map((q) => q.ref)).toEqual(['q-1']);
-    s.markChased(open.map((q) => q.id));
+    expect(open.map((i) => i.ref)).toEqual(['t-2']);
+    s.markChased(open.map((i) => i.id));
     expect(s.unchased('s1', 0)).toHaveLength(0);
+    expect(s.chaseOnce('m1')).toBe(true);
+    expect(s.chaseOnce('m1')).toBe(false);
   });
 
-  it('prunes old archived answers and orphan turns, keeping pinned ones', () => {
+  it('prunes old archived items, orphan turns, and old chase keys, keeping pinned ones', () => {
     const { s, tick } = store();
     s.addTurn(ctx, 'orphan');
-    s.ask(['old?', 'pinned?'], null, ctx);
+    s.chaseOnce('m1');
+    s.take([q('old?'), q('pinned?')], null, ctx);
     s.setArchived('q-1');
     s.setArchived('q-2');
     s.setPinned('q-2');
     tick(Math.max(ARCHIVE_TTL_MS, TURN_TTL_MS) + 1);
-    expect(s.prune()).toEqual({ questions: 1, turns: 1 });
+    expect(s.prune()).toEqual({ items: 1, turns: 1 });
     expect(s.get('q-2')).not.toBeNull();
+    expect(s.chaseOnce('m1')).toBe(true);
+  });
+
+  it('migrates a v1 questions table into items, keeping ids', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 'inbox.db');
+    const v1 = new DatabaseSync(path);
+    v1.exec(`CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, turn TEXT, session TEXT, harness TEXT,
+      cwd TEXT, root TEXT, repo TEXT, transcript TEXT, prompt TEXT, question TEXT NOT NULL, answer TEXT,
+      attachments TEXT NOT NULL DEFAULT '[]', asked_at INTEGER NOT NULL, answered_at INTEGER, read_at INTEGER,
+      archived_at INTEGER, pinned INTEGER NOT NULL DEFAULT 0, nagged INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL);
+      CREATE INDEX questions_session ON questions (session, answered_at);
+      INSERT INTO questions (id, question, answer, asked_at, answered_at, updated_at) VALUES (4, 'why?', 'because', 1, 2, 2);
+      INSERT INTO questions (id, question, asked_at, updated_at) VALUES (5, 'how?', 3, 3);`);
+    v1.close();
+    const s = new Store(path);
+    expect(s.get(4)).toMatchObject({
+      ref: 'q-4',
+      kind: 'question',
+      text: 'why?',
+      outcome: 'answered',
+      note: 'because',
+    });
+    expect(s.get(5)).toMatchObject({ outcome: null });
+    expect(s.take([t('next')], null, ctx)[0]?.ref).toBe('t-6');
+    s.close();
+    expect(new Store(path).get(4)?.note).toBe('because');
   });
 
   it('changes its version on any visible change', () => {
     const { s, tick } = store();
     const v0 = s.version();
-    s.ask(['x?'], null, ctx);
+    s.take([q('x?')], null, ctx);
     const v1 = s.version();
     tick();
     s.setRead('q-1');

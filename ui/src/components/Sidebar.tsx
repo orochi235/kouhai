@@ -3,9 +3,9 @@ import { repoClass } from '../repoColors.ts';
 import './Sidebar.css';
 
 const FILTERS: { id: Filter; label: string; count?: keyof Listing['counts'] }[] = [
-  { id: 'inbox', label: 'Inbox', count: 'inbox' },
+  { id: 'inbox', label: 'Ledger', count: 'inbox' },
   { id: 'unread', label: 'Unread', count: 'unread' },
-  { id: 'waiting', label: 'Being answered', count: 'waiting' },
+  { id: 'owed', label: 'Owed', count: 'owed' },
   { id: 'pinned', label: 'Pinned' },
   { id: 'archived', label: 'Archived' },
 ];
@@ -36,7 +36,7 @@ export function Sidebar({
       <header className="masthead">
         <span className="postmark" aria-hidden="true" />
         <h1>dixeram</h1>
-        <p className="tagline">answers to things you asked</p>
+        <p className="tagline">what your agents owe you</p>
       </header>
 
       <ul className="filters">
@@ -69,6 +69,7 @@ export function Sidebar({
                 >
                   <span className="swatch" aria-hidden="true" />
                   <span className="name">{r.repo}</span>
+                  {r.owed > 0 && <span className="count">{r.owed}</span>}
                   {r.unread > 0 && <span className="count hot">{r.unread}</span>}
                 </button>
               </li>

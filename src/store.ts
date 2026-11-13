@@ -3,53 +3,86 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
-import type { Attachment, Context, Filter, Question, Turn } from './types.ts';
+import {
+  type Attachment,
+  type Context,
+  type Filter,
+  type Item,
+  type Kind,
+  OUTCOMES,
+  type Outcome,
+  type Turn,
+} from './types.ts';
 
-const SCHEMA = `
+const TURNS = `
 CREATE TABLE IF NOT EXISTS turns (
   id TEXT PRIMARY KEY,
   session TEXT, harness TEXT, cwd TEXT, root TEXT, repo TEXT, transcript TEXT,
   prompt TEXT NOT NULL,
   at INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS questions (
+CREATE TABLE IF NOT EXISTS chased (
+  key TEXT PRIMARY KEY,
+  at INTEGER NOT NULL
+);`;
+
+const ITEMS = `
+CREATE TABLE IF NOT EXISTS items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   turn TEXT,
   session TEXT, harness TEXT, cwd TEXT, root TEXT, repo TEXT, transcript TEXT,
   prompt TEXT,
-  question TEXT NOT NULL,
-  answer TEXT,
+  kind TEXT NOT NULL DEFAULT 'question',
+  text TEXT NOT NULL,
+  outcome TEXT,
+  note TEXT,
   attachments TEXT NOT NULL DEFAULT '[]',
-  asked_at INTEGER NOT NULL,
-  answered_at INTEGER,
+  raised_at INTEGER NOT NULL,
+  settled_at INTEGER,
   read_at INTEGER,
   archived_at INTEGER,
   pinned INTEGER NOT NULL DEFAULT 0,
   nagged INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS questions_session ON questions (session, answered_at);
-`;
+CREATE INDEX IF NOT EXISTS items_session ON items (session, outcome);`;
+
+/** v1 kept only questions, in a `questions` table; each becomes a question item, ids unchanged. */
+const FROM_QUESTIONS = `
+ALTER TABLE questions RENAME TO items;
+ALTER TABLE items RENAME COLUMN question TO text;
+ALTER TABLE items RENAME COLUMN answer TO note;
+ALTER TABLE items RENAME COLUMN asked_at TO raised_at;
+ALTER TABLE items RENAME COLUMN answered_at TO settled_at;
+ALTER TABLE items ADD COLUMN kind TEXT NOT NULL DEFAULT 'question';
+ALTER TABLE items ADD COLUMN outcome TEXT;
+UPDATE items SET outcome = 'answered' WHERE note IS NOT NULL;
+DROP INDEX IF EXISTS questions_session;`;
 
 type Row = Record<string, string | number | null>;
 
 const PROMPT_CAP = 4000;
 
-export const refOf = (id: number) => `q-${id}`;
+export const refOf = (kind: Kind, id: number) => `${kind === 'task' ? 't' : 'q'}-${id}`;
+
+/** `q-17`, `t-17`, and `17` all name item 17. */
 export function idOf(ref: string | number): number | null {
   if (typeof ref === 'number') return Number.isInteger(ref) ? ref : null;
-  const m = /^(?:q-)?(\d+)$/.exec(ref.trim());
+  const m = /^(?:[qt]-)?(\d+)$/.exec(ref.trim());
   return m ? Number(m[1]) : null;
 }
 
-function toQuestion(r: Row): Question {
+function toItem(r: Row): Item {
   const n = (k: string) => (r[k] == null ? null : Number(r[k]));
   const s = (k: string) => (r[k] == null ? null : String(r[k]));
+  const kind = (r.kind === 'task' ? 'task' : 'question') as Kind;
   return {
     id: Number(r.id),
-    ref: refOf(Number(r.id)),
-    question: String(r.question),
-    answer: s('answer'),
+    ref: refOf(kind, Number(r.id)),
+    kind,
+    text: String(r.text),
+    outcome: s('outcome') as Outcome | null,
+    note: s('note'),
     attachments: JSON.parse(String(r.attachments ?? '[]')) as Attachment[],
     session: s('session'),
     harness: s('harness'),
@@ -58,8 +91,8 @@ function toQuestion(r: Row): Question {
     repo: s('repo'),
     transcript: s('transcript'),
     prompt: s('prompt'),
-    askedAt: Number(r.asked_at),
-    answeredAt: n('answered_at'),
+    raisedAt: Number(r.raised_at),
+    settledAt: n('settled_at'),
     readAt: n('read_at'),
     archivedAt: n('archived_at'),
     pinned: Boolean(r.pinned),
@@ -69,8 +102,8 @@ function toQuestion(r: Row): Question {
 
 const WHERE: Record<Filter, string> = {
   inbox: 'archived_at IS NULL',
-  unread: 'archived_at IS NULL AND answer IS NOT NULL AND read_at IS NULL',
-  waiting: 'archived_at IS NULL AND answer IS NULL',
+  owed: 'archived_at IS NULL AND outcome IS NULL',
+  unread: 'archived_at IS NULL AND outcome IS NOT NULL AND read_at IS NULL',
   pinned: 'pinned = 1',
   archived: 'archived_at IS NOT NULL',
   all: '1 = 1',
@@ -81,14 +114,33 @@ export class Store {
   now: () => number;
 
   constructor(path = dbPath(), now: () => number = Date.now) {
-    if (path !== ':memory:') {
-      mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    }
+    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(path);
     if (path !== ':memory:') chmodSync(path, 0o600);
     this.now = now;
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;');
-    this.db.exec(SCHEMA);
+    this.db.exec(TURNS);
+    this.migrate();
+  }
+
+  private has(table: string): boolean {
+    return Boolean(
+      this.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table),
+    );
+  }
+
+  private migrate() {
+    if (!this.has('items') && this.has('questions')) {
+      this.db.exec('BEGIN');
+      try {
+        this.db.exec(FROM_QUESTIONS);
+        this.db.exec('COMMIT');
+      } catch (err) {
+        this.db.exec('ROLLBACK');
+        throw err;
+      }
+    }
+    this.db.exec(ITEMS);
   }
 
   close() {
@@ -98,7 +150,7 @@ export class Store {
   addTurn(ctx: Context, prompt: string): Turn {
     const turn: Turn = {
       ...ctx,
-      id: `t-${randomBytes(4).toString('hex')}`,
+      id: `turn-${randomBytes(4).toString('hex')}`,
       prompt: prompt.slice(0, PROMPT_CAP),
       at: this.now(),
     };
@@ -123,33 +175,33 @@ export class Store {
   turn(id: string): Turn | null {
     const r = this.db.prepare('SELECT * FROM turns WHERE id = ?').get(id) as Row | undefined;
     if (!r) return null;
+    const s = (k: string) => (r[k] == null ? null : String(r[k]));
     return {
       id: String(r.id),
-      session: r.session as string | null,
-      harness: r.harness as string | null,
-      cwd: r.cwd as string | null,
-      root: r.root as string | null,
-      repo: r.repo as string | null,
-      transcript: r.transcript as string | null,
+      session: s('session'),
+      harness: s('harness'),
+      cwd: s('cwd'),
+      root: s('root'),
+      repo: s('repo'),
+      transcript: s('transcript'),
       prompt: String(r.prompt),
       at: Number(r.at),
     };
   }
 
-  /** Records questions under a turn's context, or under `fallback` when the turn is unknown. */
-  ask(questions: string[], turnId: string | null, fallback: Context): Question[] {
+  /** Files items under a turn's context, or under `fallback` when the turn is unknown. */
+  take(items: { kind: Kind; text: string }[], turnId: string | null, fallback: Context): Item[] {
     const turn = turnId ? this.turn(turnId) : null;
     const ctx: Context = turn ?? fallback;
-    const prompt = turn?.prompt ?? null;
     const at = this.now();
     const insert = this.db.prepare(
-      `INSERT INTO questions (turn, session, harness, cwd, root, repo, transcript, prompt, question, asked_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    const out: Question[] = [];
-    for (const q of questions) {
-      const text = q.trim();
-      if (!text) continue;
+    const out: Item[] = [];
+    for (const { kind, text } of items) {
+      const t = text.trim();
+      if (!t) continue;
       const { lastInsertRowid } = insert.run(
         turn?.id ?? null,
         ctx.session,
@@ -158,57 +210,77 @@ export class Store {
         ctx.root,
         ctx.repo,
         ctx.transcript,
-        prompt,
-        text,
+        turn?.prompt ?? null,
+        kind,
+        t,
         at,
         at,
       );
-      out.push(this.get(Number(lastInsertRowid)) as Question);
+      out.push(this.get(Number(lastInsertRowid)) as Item);
     }
     return out;
   }
 
-  /** Sets the answer. Answering again replaces the text, adds attachments, and marks it unread. */
-  answer(ref: string | number, body: string, attachments: Attachment[] = []): Question | null {
-    const q = this.get(ref);
-    if (!q) return null;
-    const merged = [...q.attachments];
+  /**
+   * Settles an item. Settling again replaces the outcome and note, adds attachments, and marks it
+   * unread. Throws when the outcome doesn't fit the kind.
+   */
+  settle(
+    ref: string | number,
+    outcome: Outcome,
+    note: string,
+    attachments: Attachment[] = [],
+  ): Item | null {
+    const item = this.get(ref);
+    if (!item) return null;
+    const allowed = OUTCOMES[item.kind];
+    if (!allowed.includes(outcome)) {
+      throw new Error(`a ${item.kind} settles as ${allowed.join(', ')}, not ${outcome}`);
+    }
+    const merged = [...item.attachments];
     for (const a of attachments) {
       if (!merged.some((m) => m.kind === a.kind && m.ref === a.ref)) merged.push(a);
     }
     const at = this.now();
     this.db
       .prepare(
-        'UPDATE questions SET answer = ?, attachments = ?, answered_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?',
+        'UPDATE items SET outcome = ?, note = ?, attachments = ?, settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?',
       )
-      .run(body, JSON.stringify(merged), at, at, q.id);
-    return this.get(q.id);
+      .run(outcome, note, JSON.stringify(merged), at, at, item.id);
+    return this.get(item.id);
   }
 
-  get(ref: string | number): Question | null {
+  get(ref: string | number): Item | null {
     const id = idOf(ref);
     if (id == null) return null;
-    const r = this.db.prepare('SELECT * FROM questions WHERE id = ?').get(id) as Row | undefined;
-    return r ? toQuestion(r) : null;
+    const r = this.db.prepare('SELECT * FROM items WHERE id = ?').get(id) as Row | undefined;
+    return r ? toItem(r) : null;
   }
 
-  list(filter: Filter = 'inbox', opts: { repo?: string; text?: string; limit?: number } = {}) {
+  list(
+    filter: Filter = 'inbox',
+    opts: { repo?: string; text?: string; session?: string; limit?: number } = {},
+  ) {
     const where = [WHERE[filter]];
     const args: string[] = [];
     if (opts.repo) {
       where.push('repo = ?');
       args.push(opts.repo);
     }
+    if (opts.session) {
+      where.push('session = ?');
+      args.push(opts.session);
+    }
     if (opts.text) {
-      where.push('(question LIKE ? OR answer LIKE ?)');
+      where.push('(text LIKE ? OR note LIKE ?)');
       args.push(`%${opts.text}%`, `%${opts.text}%`);
     }
     const rows = this.db
       .prepare(
-        `SELECT * FROM questions WHERE ${where.join(' AND ')} ORDER BY COALESCE(answered_at, asked_at) DESC LIMIT ${opts.limit ?? 500}`,
+        `SELECT * FROM items WHERE ${where.join(' AND ')} ORDER BY COALESCE(settled_at, raised_at) DESC LIMIT ${opts.limit ?? 500}`,
       )
       .all(...args) as Row[];
-    return rows.map(toQuestion);
+    return rows.map(toItem);
   }
 
   private flag(ref: string | number, column: 'read_at' | 'archived_at', on: boolean) {
@@ -216,7 +288,7 @@ export class Store {
     if (id == null) return null;
     const at = this.now();
     this.db
-      .prepare(`UPDATE questions SET ${column} = ?, updated_at = ? WHERE id = ?`)
+      .prepare(`UPDATE items SET ${column} = ?, updated_at = ? WHERE id = ?`)
       .run(on ? at : null, at, id);
     return this.get(id);
   }
@@ -233,7 +305,7 @@ export class Store {
     const id = idOf(ref);
     if (id == null) return null;
     this.db
-      .prepare('UPDATE questions SET pinned = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE items SET pinned = ?, updated_at = ? WHERE id = ?')
       .run(pinned ? 1 : 0, this.now(), id);
     return this.get(id);
   }
@@ -241,52 +313,59 @@ export class Store {
   readAll(): number {
     const at = this.now();
     const { changes } = this.db
-      .prepare(`UPDATE questions SET read_at = ?, updated_at = ? WHERE ${WHERE.unread}`)
+      .prepare(`UPDATE items SET read_at = ?, updated_at = ? WHERE ${WHERE.unread}`)
       .run(at, at);
     return Number(changes);
   }
 
-  /** Questions in a session still waiting on an answer that nobody has chased yet. */
-  unchased(session: string, since: number): Question[] {
+  /** Items in a session still owed that nobody has chased yet. */
+  unchased(session: string, since: number): Item[] {
     const rows = this.db
       .prepare(
-        'SELECT * FROM questions WHERE session = ? AND answer IS NULL AND nagged = 0 AND asked_at >= ? ORDER BY id',
+        'SELECT * FROM items WHERE session = ? AND outcome IS NULL AND archived_at IS NULL AND nagged = 0 AND raised_at >= ? ORDER BY id',
       )
       .all(session, since) as Row[];
-    return rows.map(toQuestion);
+    return rows.map(toItem);
   }
 
   markChased(ids: number[]) {
-    const stmt = this.db.prepare('UPDATE questions SET nagged = 1 WHERE id = ?');
+    const stmt = this.db.prepare('UPDATE items SET nagged = 1 WHERE id = ?');
     for (const id of ids) stmt.run(id);
+  }
+
+  /** Marks a key (a mid-turn message's id) as chased; false when it already was. */
+  chaseOnce(key: string): boolean {
+    const { changes } = this.db
+      .prepare('INSERT OR IGNORE INTO chased (key, at) VALUES (?, ?)')
+      .run(key, this.now());
+    return Number(changes) > 0;
   }
 
   counts() {
     const n = (w: string) =>
-      Number((this.db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE ${w}`).get() as Row).n);
-    return { unread: n(WHERE.unread), waiting: n(WHERE.waiting), inbox: n(WHERE.inbox) };
+      Number((this.db.prepare(`SELECT COUNT(*) AS n FROM items WHERE ${w}`).get() as Row).n);
+    return { unread: n(WHERE.unread), owed: n(WHERE.owed), inbox: n(WHERE.inbox) };
   }
 
   /** Changes whenever anything a viewer could see changes, so a page can poll it cheaply. */
   version(): string {
     const r = this.db
-      .prepare('SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS t FROM questions')
+      .prepare('SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS t FROM items')
       .get() as Row;
     return `${r.n}:${r.t}`;
   }
 
-  prune(): { questions: number; turns: number } {
+  prune(): { items: number; turns: number } {
     const now = this.now();
     const q = this.db
-      .prepare(
-        'DELETE FROM questions WHERE archived_at IS NOT NULL AND archived_at < ? AND pinned = 0',
-      )
+      .prepare('DELETE FROM items WHERE archived_at IS NOT NULL AND archived_at < ? AND pinned = 0')
       .run(now - ARCHIVE_TTL_MS);
     const t = this.db
       .prepare(
-        'DELETE FROM turns WHERE at < ? AND id NOT IN (SELECT turn FROM questions WHERE turn IS NOT NULL)',
+        'DELETE FROM turns WHERE at < ? AND id NOT IN (SELECT turn FROM items WHERE turn IS NOT NULL)',
       )
       .run(now - TURN_TTL_MS);
-    return { questions: Number(q.changes), turns: Number(t.changes) };
+    this.db.prepare('DELETE FROM chased WHERE at < ?').run(now - TURN_TTL_MS);
+    return { items: Number(q.changes), turns: Number(t.changes) };
   }
 }

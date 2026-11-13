@@ -60,6 +60,37 @@
   border-bottom: 1px dashed var(--ink-faint);
 }
 
+.re-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* A rubber stamp: what became of the item. */
+.stamp {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 3px 10px 2px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  transform: rotate(-4deg);
+  opacity: 0.85;
+  color: var(--done);
+}
+
+.stamp.dropped {
+  color: var(--stamp);
+}
+
+.stamp.deferred {
+  color: var(--ink-soft);
+  border-style: dashed;
+}
+
 .re {
   font-family: var(--mono);
   font-size: 11px;

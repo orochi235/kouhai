@@ -1,19 +1,26 @@
 import { useMemo, useState } from 'react';
-import type { Attachment, Question } from '../api.ts';
+import type { Attachment, Item, Outcome } from '../api.ts';
 import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
 import './Reader.css';
 
 type Props = {
-  question: Question | null;
-  onArchive: (q: Question) => void;
-  onPin: (q: Question) => void;
-  onUnread: (q: Question) => void;
-  onReveal: (q: Question, ref: string) => void;
+  item: Item | null;
+  onArchive: (q: Item) => void;
+  onPin: (q: Item) => void;
+  onUnread: (q: Item) => void;
+  onReveal: (q: Item, ref: string) => void;
 };
 
 const BRAINHOUSE = 'http://localhost:8765';
+
+const STAMP: Record<Outcome, string> = {
+  answered: 'Answered',
+  done: 'Done',
+  dropped: 'Dropped',
+  deferred: 'Deferred',
+};
 
 const KIND: Record<Attachment['kind'], string> = {
   artifact: 'Artifact',
@@ -23,7 +30,7 @@ const KIND: Record<Attachment['kind'], string> = {
 };
 
 /** A shell that reopens the session, each step on its own line, in the harness it ran under. */
-export function resumeCommand(q: Question): string {
+export function resumeCommand(q: Item): string {
   const env = q.harness && q.harness !== 'claude' ? `CLAUDE_CONFIG_DIR=~/.${q.harness} ` : '';
   return `${q.cwd ? `cd '${q.cwd.replace(/'/g, "'\\''")}'\n` : ''}${env}claude --resume ${q.session}`;
 }
@@ -45,8 +52,8 @@ function Copy({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Props) {
-  const html = useMemo(() => (q?.answer ? render(q.answer) : ''), [q?.answer]);
+export function Reader({ item: q, onArchive, onPin, onUnread, onReveal }: Props) {
+  const html = useMemo(() => (q?.note ? render(q.note) : ''), [q?.note]);
   if (!q) {
     return (
       <article className="reader blank">
@@ -59,7 +66,7 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
       <div className="toolbar">
         <span className="ref">{q.ref}</span>
         <span className="spacer" />
-        {q.answer && (
+        {q.outcome && (
           <button type="button" className="quiet" onClick={() => onUnread(q)}>
             {q.readAt ? 'Mark unread' : 'Mark read'}
           </button>
@@ -74,8 +81,11 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
 
       <div className="sheet">
         <header className="envelope">
-          <p className="re">You asked</p>
-          <h2 className="question">{q.question}</h2>
+          <div className="re-row">
+            <p className="re">{q.kind === 'task' ? 'You told it to' : 'You asked'}</p>
+            {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}
+          </div>
+          <h2 className="question">{q.text}</h2>
           <dl className="postmark-block">
             {q.repo && (
               <div>
@@ -92,13 +102,13 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
               </div>
             )}
             <div>
-              <dt>asked</dt>
-              <dd>{stamp(q.askedAt)}</dd>
+              <dt>{q.kind === 'task' ? 'given' : 'asked'}</dt>
+              <dd>{stamp(q.raisedAt)}</dd>
             </div>
-            {q.answeredAt && (
+            {q.settledAt && q.outcome && (
               <div>
-                <dt>answered</dt>
-                <dd>{stamp(q.answeredAt)}</dd>
+                <dt>{q.outcome}</dt>
+                <dd>{stamp(q.settledAt)}</dd>
               </div>
             )}
             {q.cwd && (
@@ -110,10 +120,14 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
           </dl>
         </header>
 
-        {q.answer ? (
+        {q.note ? (
           <div className="answer" dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <p className="answer pending">Claude has this question and hasn't answered it yet.</p>
+          <p className="answer pending">
+            {q.kind === 'task'
+              ? "Still owed. Claude took this on and hasn't settled it."
+              : "Claude has this question and hasn't answered it yet."}
+          </p>
         )}
 
         {q.attachments.length > 0 && (
@@ -141,7 +155,7 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
           </section>
         )}
 
-        {q.prompt && q.prompt.trim() !== q.question.trim() && (
+        {q.prompt && q.prompt.trim() !== q.text.trim() && (
           <details className="prompt">
             <summary>The whole prompt it came from</summary>
             <pre>{q.prompt}</pre>
@@ -152,7 +166,7 @@ export function Reader({ question: q, onArchive, onPin, onUnread, onReveal }: Pr
           {q.session && <Copy text={resumeCommand(q)} label="Copy resume command" />}
           <a
             className="quiet"
-            href={`${BRAINHOUSE}/?q=${encodeURIComponent((q.prompt ?? q.question).replace(/^\s*\?\?\s*/, '').slice(0, 60))}`}
+            href={`${BRAINHOUSE}/?q=${encodeURIComponent((q.prompt ?? q.text).replace(/^\s*\?\?\s*/, '').slice(0, 60))}`}
             target="_blank"
             rel="noreferrer"
           >

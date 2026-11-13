@@ -1,48 +1,67 @@
-// A stdio MCP server with no dependencies: newline-delimited JSON-RPC, the three methods Claude Code calls.
+// A stdio MCP server with no dependencies: newline-delimited JSON-RPC, the methods Claude Code calls.
 import { createInterface } from 'node:readline';
 import { contextOf } from './context.ts';
+import { RULE } from './hooks.ts';
 import { apiBase } from './paths.ts';
 import type { Store } from './store.ts';
-import { ATTACHMENT_KINDS, type Attachment, type Context } from './types.ts';
+import {
+  ATTACHMENT_KINDS,
+  type Attachment,
+  type Context,
+  KINDS,
+  type Kind,
+  OUTCOMES,
+  type Outcome,
+} from './types.ts';
 
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 
 const INSTRUCTIONS =
-  "dixeram keeps the user's direct questions and your answers in an inbox they read later, so an answer " +
-  'given in the middle of other work is not lost. When the user asks you something directly, call `ask` ' +
-  'before doing the work, then `answer` once you know. Still answer in chat as usual.';
+  "dixeram is a ledger of what you owe the user: their direct questions, and instructions you haven't " +
+  'carried out yet. They read it later, so nothing asked mid-task gets lost. Answer in chat as usual too. ' +
+  RULE;
+
+const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
 
 const TOOLS = [
   {
-    name: 'ask',
+    name: 'take',
     description:
-      'Record direct questions the user asked you, so the answers reach their inbox. One entry per question, ' +
-      'quoted or tightly paraphrased in their words. Not for requests worded as questions ("can you fix X?"). ' +
-      'Pass the `turn` id from the dixeram hook when one was given. Returns an id like q-17 for each.',
+      'File items you now owe the user. A "question" is anything they asked you directly. A "task" is ' +
+      'an instruction you will not finish before this turn ends; one you carry out now needs no filing. ' +
+      'Quote or tightly paraphrase their words. Pass the `turn` id from the dixeram hook when one was ' +
+      'given. Returns ids like q-17 and t-18.',
     inputSchema: {
       type: 'object',
       properties: {
-        questions: { type: 'array', items: { type: 'string' }, minItems: 1 },
-        turn: {
-          type: 'string',
-          description: 'The turn id from the dixeram hook, e.g. t-1a2b3c4d.',
+        items: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: { kind: { type: 'string', enum: KINDS }, text: { type: 'string' } },
+            required: ['kind', 'text'],
+          },
         },
+        turn: { type: 'string', description: 'The turn id from the dixeram hook.' },
       },
-      required: ['questions'],
+      required: ['items'],
     },
   },
   {
-    name: 'answer',
+    name: 'settle',
     description:
-      'Deliver the answer to a recorded question. Markdown. It is read away from this conversation, so lead ' +
-      'with the answer and include the context needed to understand it. Answering again replaces the text, ' +
-      'keeps earlier attachments, and marks it unread. Attach richer material (a claude.ai artifact URL, a ' +
-      'file, a link) with `attachments`.',
+      'Settle an item. A question settles as answered, a task as done; either can be dropped or ' +
+      'deferred. The note is markdown read away from this conversation: for an answer, lead with the ' +
+      'answer and give the context needed; for a task, what was done (commits, files); for dropped or ' +
+      'deferred, why, and where it went. Settling again replaces the note, keeps attachments, and marks ' +
+      'it unread. Attach richer material (a claude.ai artifact URL, a file, a link) with `attachments`.',
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'The question id, e.g. q-17.' },
-        answer: { type: 'string' },
+        id: { type: 'string', description: 'The item id, e.g. q-17 or t-18.' },
+        outcome: { type: 'string', enum: ALL_OUTCOMES },
+        note: { type: 'string' },
         attachments: {
           type: 'array',
           items: {
@@ -56,7 +75,17 @@ const TOOLS = [
           },
         },
       },
-      required: ['id', 'answer'],
+      required: ['id', 'outcome', 'note'],
+    },
+  },
+  {
+    name: 'owed',
+    description:
+      'List what this session still owes the user. Use it after a long stretch of work or a ' +
+      'compaction, before telling the user you are finished.',
+    inputSchema: {
+      type: 'object',
+      properties: { turn: { type: 'string', description: 'Any turn id from this session.' } },
     },
   },
 ];
@@ -85,36 +114,62 @@ function attachmentsOf(v: unknown): Attachment[] {
   });
 }
 
+function itemsOf(v: unknown): { kind: Kind; text: string }[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((i) => {
+    if (!i || typeof i !== 'object') return [];
+    const { kind, text: t } = i as Record<string, unknown>;
+    if (!KINDS.includes(kind as Kind) || typeof t !== 'string' || !t.trim()) return [];
+    return [{ kind: kind as Kind, text: t }];
+  });
+}
+
 export function callTool(
   store: Store,
   fallback: Context,
   name: string,
   args: Record<string, unknown>,
 ): Result {
-  if (name === 'ask') {
-    const qs = Array.isArray(args.questions)
-      ? args.questions.filter((q) => typeof q === 'string')
-      : [];
-    if (!qs.length) return text('`questions` needs at least one question.', true);
+  const link = (ref: string) => `${apiBase().replace('127.0.0.1', 'localhost')}/?q=${ref}`;
+  if (name === 'take') {
+    const items = itemsOf(args.items);
+    if (!items.length) return text('`items` needs at least one {kind, text}.', true);
     const turn = typeof args.turn === 'string' ? args.turn : null;
-    const recorded = store.ask(qs as string[], turn, fallback);
+    const filed = store.take(items, turn, fallback);
     return text(
-      `Filed ${recorded.length === 1 ? 'one question' : `${recorded.length} questions`} in the dixeram inbox:\n` +
-        recorded.map((q) => `${q.ref}: ${q.question}`).join('\n') +
-        '\nTell the user in one line what you filed, then answer each with `answer`.',
+      `Filed in the dixeram ledger:\n${filed.map((i) => `${i.ref}: ${i.text}`).join('\n')}\n` +
+        'Tell the user in one line what you filed, then `settle` each when it is.',
     );
   }
-  if (name === 'answer') {
+  if (name === 'settle') {
     if (typeof args.id !== 'string' && typeof args.id !== 'number')
       return text('`id` is required.', true);
-    if (typeof args.answer !== 'string' || !args.answer.trim())
-      return text('`answer` is required.', true);
-    const q = store.answer(args.id, args.answer, attachmentsOf(args.attachments));
-    if (!q) return text(`No question ${args.id}.`, true);
+    if (!ALL_OUTCOMES.includes(args.outcome as Outcome))
+      return text(`\`outcome\` is one of ${ALL_OUTCOMES.join(', ')}.`, true);
+    if (typeof args.note !== 'string' || !args.note.trim())
+      return text('`note` is required.', true);
+    const item = store.settle(
+      args.id,
+      args.outcome as Outcome,
+      args.note,
+      attachmentsOf(args.attachments),
+    );
+    if (!item) return text(`No item ${args.id}.`, true);
     return text(
-      `${q.ref} delivered to the inbox (${apiBase().replace('127.0.0.1', 'localhost')}/?q=${q.ref})` +
-        (q.attachments.length ? ` with ${q.attachments.length} enclosed` : '') +
-        '. End your answer in chat with its id.',
+      `${item.ref} settled as ${item.outcome} (${link(item.ref)})` +
+        (item.attachments.length ? ` with ${item.attachments.length} enclosed` : '') +
+        (item.kind === 'question' ? '. End your answer in chat with its id.' : '.'),
+    );
+  }
+  if (name === 'owed') {
+    const turn = typeof args.turn === 'string' ? store.turn(args.turn) : null;
+    const session = turn?.session ?? fallback.session;
+    if (!session) return text('No session to look up; pass a turn id.', true);
+    const owed = store.list('owed', { session });
+    return text(
+      owed.length
+        ? `Still owed:\n${owed.map((i) => `${i.ref} (${i.kind}): ${i.text}`).join('\n')}`
+        : 'Nothing owed in this session.',
     );
   }
   return text(`Unknown tool ${name}.`, true);
@@ -140,7 +195,7 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
       try {
         return reply(callTool(store, fallback, name, args));
       } catch (err) {
-        return reply(text(`dixeram failed: ${(err as Error).message}`, true));
+        return reply(text(`dixeram: ${(err as Error).message}`, true));
       }
     }
     default:

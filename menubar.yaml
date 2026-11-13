@@ -1,4 +1,4 @@
-# The dixeram menu bar item: the unread count, and the latest unread answers. `perch install`
+# The dixeram menu bar item: unread settled items, and what is still owed. `perch install`
 # from this directory builds it and hands it to launchd. Every line it shows is worded by the
 # daemon (src/menu.ts).
 
@@ -20,10 +20,11 @@ watch:
     shape:
       title: string
       unread: int
-      waiting: int
-      waitingText: string
+      owed: int
+      owedText: string
       inbox: string
       rows: [{ id: string, text: string, repo: string, url: string }]
+      owedRows: [{ id: string, text: string, repo: string, url: string }]
 
 state:
   - uninstalled: "!daemon.installed"
@@ -34,15 +35,13 @@ state:
 status:
   - when: wedged
     icon: exclamationmark.triangle
-  - when: "uninstalled || stopped || (up && m.data.unread == 0)"
+  - when: "uninstalled || stopped || (up && m.data.unread == 0 && m.data.owed == 0)"
     dim: true
   - badge: "up && m.data.unread > 0 ? string(m.data.unread) : ''"
 
 menu:
   - text: "{{m.data.title}}"
     when: up
-  - text: "{{m.data.waitingText}}"
-    when: "up && m.data.waiting > 0"
   - text: "The daemon is not installed — npm run service:install in ~/src/dixeram"
     when: uninstalled
   - text: "The daemon is installed but not loaded"
@@ -53,6 +52,14 @@ menu:
   - each: m.data.rows
     when: up
     text: "{{it.text}}"
+    open: "{{it.url}}"
+  - separator
+  - text: "{{m.data.owedText}}"
+    when: "up && m.data.owed > 0"
+  - each: m.data.owedRows
+    when: up
+    text: "{{it.text}}"
+    icon: { symbol: circle.dashed, fg: gray }
     open: "{{it.url}}"
   - separator
   - text: Open inbox

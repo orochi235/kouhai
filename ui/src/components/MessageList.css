@@ -75,7 +75,7 @@
     0 0 0 3px var(--stamp);
 }
 
-.item.waiting .mark {
+.item.owed .mark {
   border: 1.5px dashed var(--ink-faint);
   animation: turn 6s linear infinite;
 }
@@ -138,7 +138,7 @@
   overflow: hidden;
 }
 
-.item.waiting .a {
+.item.owed .a {
   font-style: italic;
   color: var(--ink-faint);
 }
@@ -193,7 +193,31 @@
 
 @media (prefers-reduced-motion: reduce) {
   .items li,
-  .item.waiting .mark {
+  .item.owed .mark {
     animation: none;
   }
+}
+
+.kind {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  min-width: 4ch;
+}
+
+.kind.task {
+  color: var(--stamp);
+}
+
+.outcome {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0 4px;
 }
