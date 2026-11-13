@@ -13,3 +13,14 @@
   daemon from attached paths only. (2026-11-13)
 - **Owed and unread counts in the Claude status line.** The menu bar shows them; the status line
   could too, from `sqlite3 ~/.dixeram/inbox.db` so it costs no Node start. (2026-11-13)
+- **Don't keep a question that was seen and won't outlive the session.** A question can be settled
+  with no inbox entry when both hold: the next prompt responds to the answer, so it was seen; and
+  the answer is about something that won't last past the session, like a label on a page made for
+  this task. An answer given after attention moved on still gets filed, which is the point of the
+  inbox. Neither is known when the question is filed, so this is a settle on the next prompt, with
+  Claude judging the second condition. Closes when such a question leaves nothing unread. Raised
+  2026-11-13 over "what do those 'read' badges mean?" on a weasel audit page.
+- **The old `ask` and `answer` tools still load and fail.** In a weasel session on 2026-11-13 the
+  hook asked for `take`, but a tool search for it surfaced only `ask` and `answer`, and `ask` failed
+  with "no such table: questions". Closes when only the current tools are exposed, or the old ones
+  forward to `take` and `settle`.
