@@ -19,8 +19,10 @@ export const RULE =
   'you carry out in this turn needs no filing. A filed item stays owed until it is settled: a question ' +
   'as answered, a task as done, either as dropped (with why), or as deferred, which means moved to ' +
   'another durable home such as a TODO entry or an issue (say where). Work still waiting on a later ' +
-  'turn is owed, not deferred: leave it open. Say in one line what you filed ("Filed q-17, t-18."), and ' +
-  'end an answer in chat with its id ("(q-17 → inbox)"). Notes are read later, away from this ' +
+  'turn is owed, not deferred: leave it open. Only once `take` has returned ids, say in one line what ' +
+  'you filed ("Filed q-17, t-18."), and end an answer in chat with its id ("(q-17 → inbox)"); never ' +
+  'announce a filing before it is accepted, and if `take` fails, say it failed rather than naming an ' +
+  'id. Notes are read later, away from this ' +
   'conversation, so make them stand on their own and link generously: every file you name as a ' +
   'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
   'issues, docs, and artifacts by URL.';
