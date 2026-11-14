@@ -13,3 +13,10 @@
   daemon from attached paths only. (2026-11-13)
 - **Owed and unread counts in the Claude status line.** The menu bar shows them; the status line
   could too, from `sqlite3 ~/.dixeram/inbox.db` so it costs no Node start. (2026-11-13)
+- **`take` can hang until Claude Code's 30-minute MCP timeout.** In one weasel session (2026-11-14) all
+  three `take` calls hung and failed with "sent no response or progress for 1800s", so nothing that
+  session filed reached the ledger. Ruled out the same day: the store (`dixeram ls owed` answers in
+  0.2 s), `mcp-call` (a `tools/list` piped to it answers at once), and a stuck child (no `mcp-call`
+  process under any of the three live `dixeram mcp` relays). Not yet checked: whether the request
+  reaches the relay at all, and what the relay writes back for a `tools/call`. Closes when a `take`
+  either answers or fails within seconds.
