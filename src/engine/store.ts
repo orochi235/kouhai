@@ -318,6 +318,37 @@ export class Store {
     return Number(changes);
   }
 
+  /** When this session's latest turn began, or null for a session with no turns yet. */
+  lastTurnAt(session: string): number | null {
+    const r = this.db.prepare('SELECT MAX(at) AS at FROM turns WHERE session = ?').get(session) as
+      | Row
+      | undefined;
+    return r?.at == null ? null : Number(r.at);
+  }
+
+  /** Questions in a session answered since `since` and not yet read. */
+  answeredSince(session: string, since: number): Item[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM items WHERE session = ? AND kind = 'question' AND outcome = 'answered' AND ${WHERE.unread} AND settled_at >= ? ORDER BY id`,
+      )
+      .all(session, since) as Row[];
+    return rows.map(toItem);
+  }
+
+  /** Takes a settled item out of the inbox as already seen: read and archived at once. */
+  clear(ref: string | number): Item | null {
+    const id = idOf(ref);
+    if (id == null) return null;
+    const at = this.now();
+    this.db
+      .prepare(
+        'UPDATE items SET read_at = ?, archived_at = ?, updated_at = ? WHERE id = ? AND outcome IS NOT NULL',
+      )
+      .run(at, at, at, id);
+    return this.get(id);
+  }
+
   /** Items in a session still owed that nobody has chased yet. */
   unchased(session: string, since: number): Item[] {
     const rows = this.db

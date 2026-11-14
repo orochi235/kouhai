@@ -21,9 +21,13 @@ says where. Work still waiting on a later turn stays owed.
 | Prompt sent    | `UserPromptSubmit` hook    | Opens a _turn_ holding the prompt's context and tells Claude the filing rule and the turn id.                                                                                                                                               |
 | Claude files   | MCP tool `take`            | Claude files each question, and each task it won't finish now, getting back `q-17`, `t-18`.                                                                                                                                                 |
 | Claude settles | MCP tool `settle`          | An outcome and a markdown note written to stand alone, linking every file, commit, and issue it names, plus optional attachments (an artifact URL, a file, a link, a transom render). Settling again replaces the note and marks it unread. |
+| Answer seen    | MCP tool `clear`           | On the next prompt the hook names last turn's answers. When that prompt responds to one and the answer won't outlive the session (a label on a page made for this task), Claude clears it: read and archived, so it never sits unread.      |
 | Turn ends      | `Stop` hook                | Holds the turn open once for items from this session still owed, and for messages you sent mid-turn that the ledger never heard about (they reach Claude without a prompt hook; the hook finds them in the transcript).                     |
 | Next session   | `SessionStart` hook        | Owed and unread items from this repo get mentioned in one line.                                                                                                                                                                             |
 | You read it    | `localhost:8771`, menu bar | The ledger by repo, with unread and owed counts in the menu bar.                                                                                                                                                                            |
+
+The MCP server Claude Code keeps running is only a relay: each request runs in a fresh process, so
+a session started before a change still gets the current tools, and is told when they change.
 
 Each stage says what it did in the transcript: the hooks print a `dixeram ▸` line, Claude says
 what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list

@@ -15,7 +15,7 @@ const call = (s: Store, name: string, args: object) =>
   };
 
 describe('mcp', () => {
-  it('lists take, settle, and owed', () => {
+  it('lists take, settle, clear, and owed', () => {
     const out = handle(new Store(':memory:'), fb, {
       jsonrpc: '2.0',
       id: 1,
@@ -23,7 +23,7 @@ describe('mcp', () => {
     }) as {
       result: { tools: { name: string }[] };
     };
-    expect(out.result.tools.map((t) => t.name)).toEqual(['take', 'settle', 'owed']);
+    expect(out.result.tools.map((t) => t.name)).toEqual(['take', 'settle', 'clear', 'owed']);
   });
 
   it('takes, lists owed, and settles with attachments, dropping malformed ones', () => {
@@ -66,5 +66,14 @@ describe('mcp', () => {
     expect(
       handle(new Store(':memory:'), fb, { jsonrpc: '2.0', method: 'notifications/initialized' }),
     ).toBeNull();
+  });
+
+  it('clears a settled question from the inbox, and refuses an owed one', () => {
+    const s = new Store(':memory:');
+    s.take([{ kind: 'question', text: 'what do the badges mean?' }], null, fb);
+    expect(call(s, 'clear', { id: 'q-1' }).result.isError).toBe(true);
+    s.settle('q-1', 'answered', 'unread items');
+    expect(call(s, 'clear', { id: 'q-1' }).result.isError).toBeUndefined();
+    expect(s.counts()).toMatchObject({ unread: 0, inbox: 0 });
   });
 });

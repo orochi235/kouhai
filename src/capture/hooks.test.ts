@@ -44,6 +44,29 @@ describe('promptHook', () => {
   });
 });
 
+describe('promptHook on the turn after an answer', () => {
+  const said = (s: Store, prompt: string) =>
+    (promptHook(s, payload(prompt)) as Out).hookSpecificOutput?.additionalContext ?? '';
+
+  it('offers to clear questions answered last turn, and only those', () => {
+    let t = 1000;
+    const s = new Store(':memory:', () => t);
+    s.take([{ kind: 'question', text: 'old?' }], null, ctx('s1'));
+    s.settle('q-1', 'answered', 'yes');
+    t = 2000;
+    said(s, 'what do the badges mean?');
+    s.take([{ kind: 'question', text: 'what do the badges mean?' }], null, ctx('s1'));
+    t = 3000;
+    s.settle('q-2', 'answered', 'unread items');
+    t = 4000;
+    const next = said(s, 'ok, rename them');
+    expect(next).toContain('q-2');
+    expect(next).not.toMatch(/q-1\b/);
+    expect(next).toContain('`clear`');
+    expect(said(s, 'next thing')).not.toContain('`clear`');
+  });
+});
+
 describe('stopHook', () => {
   it('blocks once for owed items, worded per kind', () => {
     const s = new Store(':memory:');

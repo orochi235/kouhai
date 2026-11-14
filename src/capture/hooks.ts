@@ -25,13 +25,29 @@ export const RULE =
   'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
   'issues, docs, and artifacts by URL.';
 
+/** Last turn's answers, which this prompt may show were already read. */
+function seenRule(answered: Item[]): string {
+  return (
+    `Last turn you answered ${answered.map((q) => `${q.ref} ${quote(q.text, 60)}`).join(', ')}. ` +
+    'Clear one with the dixeram `clear` tool only when both hold: this prompt responds to that ' +
+    'answer, so the user has seen it; and the answer is about something that will not outlive this ' +
+    'session, such as a label on a page made for this task. Otherwise leave it in the inbox: an ' +
+    'answer that lasts, or one the user moved on from, is what the inbox is for.'
+  );
+}
+
 export function promptHook(store: Store, p: Payload, configDir?: string): HookOutput {
   const prompt = typeof p.prompt === 'string' ? p.prompt : '';
   if (!prompt.trim()) return null;
-  const turn = store.addTurn(
-    contextOf({ session: p.session_id, transcript: p.transcript_path, cwd: p.cwd, configDir }),
-    prompt,
-  );
+  const ctx = contextOf({
+    session: p.session_id,
+    transcript: p.transcript_path,
+    cwd: p.cwd,
+    configDir,
+  });
+  const since = ctx.session ? store.lastTurnAt(ctx.session) : null;
+  const answered = ctx.session && since != null ? store.answeredSince(ctx.session, since) : [];
+  const turn = store.addTurn(ctx, prompt);
   const { forced, candidate } = detect(prompt);
   return {
     ...(candidate
@@ -48,7 +64,8 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
         (forced
           ? 'The user marked this prompt with `??`: it asks at least one direct question. '
           : '') +
-        RULE,
+        RULE +
+        (answered.length ? ` ${seenRule(answered)}` : ''),
     },
   };
 }

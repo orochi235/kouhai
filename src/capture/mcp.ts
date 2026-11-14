@@ -1,4 +1,5 @@
 // A stdio MCP server with no dependencies: newline-delimited JSON-RPC, the methods Claude Code calls.
+import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { contextOf } from '../engine/context.ts';
 import { apiBase } from '../engine/paths.ts';
@@ -76,6 +77,18 @@ const TOOLS = [
         },
       },
       required: ['id', 'outcome', 'note'],
+    },
+  },
+  {
+    name: 'clear',
+    description:
+      'Take an answered question out of the inbox because the user has already seen it, only as the ' +
+      'dixeram hook describes: the next prompt responds to the answer, and the answer will not ' +
+      'outlive this session.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'The item id, e.g. q-17.' } },
+      required: ['id'],
     },
   },
   {
@@ -161,6 +174,15 @@ export function callTool(
         (item.kind === 'question' ? '. End your answer in chat with its id.' : '.'),
     );
   }
+  if (name === 'clear') {
+    if (typeof args.id !== 'string' && typeof args.id !== 'number')
+      return text('`id` is required.', true);
+    const item = store.get(args.id);
+    if (!item) return text(`No item ${args.id}.`, true);
+    if (!item.outcome) return text(`${item.ref} is still owed; settle it first.`, true);
+    store.clear(item.id);
+    return text(`${item.ref} cleared from the inbox as seen.`);
+  }
   if (name === 'owed') {
     const turn = typeof args.turn === 'string' ? store.turn(args.turn) : null;
     const session = turn?.session ?? fallback.session;
@@ -181,7 +203,7 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
     case 'initialize':
       return reply({
         protocolVersion: msg.params?.protocolVersion ?? '2025-06-18',
-        capabilities: { tools: {} },
+        capabilities: { tools: { listChanged: true } },
         serverInfo: { name: 'dixeram', version: VERSION },
         instructions: INSTRUCTIONS,
       });
@@ -208,24 +230,62 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
   }
 }
 
-export function serve(store: Store): void {
+/** One JSON-RPC line in, its reply out (null for a notification), against the code on disk now. */
+export function respond(store: Store, line: string): string | null {
+  let msg: Rpc;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
   // A tool call without a turn id is filed under whatever this process can see of its session.
   const fallback = contextOf({
     session: process.env.CLAUDE_CODE_SESSION_ID,
     cwd: process.cwd(),
     configDir: process.env.CLAUDE_CONFIG_DIR,
   });
+  const out = handle(store, fallback, msg);
+  return out ? JSON.stringify(out) : null;
+}
+
+/**
+ * The long-lived server is only a relay: each request runs in a fresh `dixeram mcp-call`, so a
+ * session started before a change still gets current code, and is told when the tools change.
+ */
+export function serve(): void {
+  const relay = (line: string) =>
+    spawnSync(process.execPath, [...process.execArgv, process.argv[1] ?? '', 'mcp-call'], {
+      input: line,
+      encoding: 'utf8',
+    }).stdout.trim();
+  const toolsOf = (reply: string) => {
+    try {
+      return JSON.stringify(JSON.parse(reply).result?.tools ?? null);
+    } catch {
+      return null;
+    }
+  };
+  let listed: string | null = null;
   const rl = createInterface({ input: process.stdin });
   rl.on('line', (line) => {
-    if (!line.trim()) return;
     let msg: Rpc;
     try {
       msg = JSON.parse(line);
     } catch {
       return;
     }
-    const out = handle(store, fallback, msg);
-    if (out) process.stdout.write(`${JSON.stringify(out)}\n`);
+    if (msg.id === undefined) return;
+    const reply = relay(line);
+    if (reply) process.stdout.write(`${reply}\n`);
+    if (msg.method === 'tools/list') listed = toolsOf(reply);
+    if (msg.method === 'tools/call' && listed !== null) {
+      const now = toolsOf(relay(JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'tools/list' })));
+      if (now !== null && now !== listed) {
+        listed = now;
+        process.stdout.write(
+          `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' })}\n`,
+        );
+      }
+    }
   });
-  rl.on('close', () => store.close());
 }

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { menubar } from '../outlets/menubar/outlet.ts';
 import { web } from '../outlets/web/outlet.ts';
 import { type Payload, promptHook, sessionStartHook, stopHook } from './capture/hooks.ts';
-import { serve } from './capture/mcp.ts';
+import { respond, serve } from './capture/mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
 import { idOf, Store } from './engine/store.ts';
 import { FILTERS, type Filter, type Item } from './engine/types.ts';
@@ -17,7 +17,8 @@ const USAGE = `dixeram: a ledger of what Claude sessions owe you
   dixeram prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
   dixeram daemon                     serve the inbox page on :${port()}
-  dixeram mcp                        the MCP server Claude Code starts
+  dixeram mcp                        the MCP server Claude Code starts (a relay)
+  dixeram mcp-call                   answer one MCP request from stdin, for the relay
   dixeram hook prompt|stop|session-start  the hooks Claude Code runs`;
 
 async function stdin(): Promise<Payload> {
@@ -49,7 +50,19 @@ async function main(argv: string[]) {
     case 'daemon':
       return runDaemon([web, menubar]);
     case 'mcp':
-      return serve(new Store());
+      return serve();
+    case 'mcp-call': {
+      let line = '';
+      for await (const chunk of process.stdin) line += chunk;
+      const store = new Store();
+      try {
+        const out = respond(store, line);
+        if (out) process.stdout.write(`${out}\n`);
+      } finally {
+        store.close();
+      }
+      return;
+    }
     case 'hook': {
       const p = await stdin();
       const store = new Store();
