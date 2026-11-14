@@ -5,6 +5,7 @@ import { MessageList } from './components/MessageList.tsx';
 import { Reader } from './components/Reader.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { repoSheet } from './repoColors.ts';
+import { thread } from './thread.ts';
 
 const initialRef = () => new URLSearchParams(location.search).get('q');
 
@@ -44,7 +45,8 @@ export function App() {
     [load],
   );
 
-  const items = listing?.items ?? [];
+  const rows = useMemo(() => thread(listing?.items ?? []), [listing]);
+  const items = useMemo(() => rows.map((r) => r.item), [rows]);
   const current = useMemo(() => items.find((q) => q.ref === selected) ?? null, [items, selected]);
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export function App() {
         }}
       />
       <MessageList
-        items={items}
+        rows={rows}
         selected={selected}
         filter={filter}
         text={text}
@@ -137,6 +139,8 @@ export function App() {
       />
       <Reader
         item={current}
+        parent={items.find((q) => q.ref === current?.parent) ?? null}
+        onSelect={setSelected}
         onArchive={(q) => act('archive', q, !q.archivedAt)}
         onPin={(q) => act('pin', q, !q.pinned)}
         onUnread={(q) => act('read', q, !q.readAt)}

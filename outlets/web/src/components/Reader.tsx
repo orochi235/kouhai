@@ -3,10 +3,14 @@ import type { Attachment, Item, Outcome } from '../api.ts';
 import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
+import { Follows } from './Follows.tsx';
 import './Reader.css';
 
 type Props = {
   item: Item | null;
+  /** The listed item this one follows up on. */
+  parent: Item | null;
+  onSelect: (ref: string) => void;
   onArchive: (q: Item) => void;
   onPin: (q: Item) => void;
   onUnread: (q: Item) => void;
@@ -53,7 +57,16 @@ function Copy({ text, label }: { text: string; label: string }) {
   );
 }
 
-export function Reader({ item: q, onArchive, onPin, onUnread, onReveal, onOpenPath }: Props) {
+export function Reader({
+  item: q,
+  parent,
+  onSelect,
+  onArchive,
+  onPin,
+  onUnread,
+  onReveal,
+  onOpenPath,
+}: Props) {
   const html = useMemo(() => (q?.note ? render(q.note) : ''), [q?.note]);
   if (!q) {
     return (
@@ -82,6 +95,7 @@ export function Reader({ item: q, onArchive, onPin, onUnread, onReveal, onOpenPa
 
       <div className="sheet">
         <header className="envelope">
+          {q.parent && <Follows of={q.parent} parent={parent} onSelect={onSelect} />}
           <div className="re-row">
             <p className="re">{q.kind === 'task' ? 'You told it to' : 'You asked'}</p>
             {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}

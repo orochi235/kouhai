@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import type { Filter, Item } from '../api.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
+import type { Row } from '../thread.ts';
 import { age } from '../time.ts';
 import './MessageList.css';
 
@@ -15,7 +16,7 @@ const EMPTY: Record<Filter, string> = {
 };
 
 type Props = {
-  items: Item[];
+  rows: Row[];
   selected: string | null;
   filter: Filter;
   text: string;
@@ -24,7 +25,7 @@ type Props = {
   onSelect: (ref: string) => void;
 };
 
-export function MessageList({ items, selected, filter, text, searchRef, onText, onSelect }: Props) {
+export function MessageList({ rows, selected, filter, text, searchRef, onText, onSelect }: Props) {
   return (
     <section className="list">
       <div className="search">
@@ -36,11 +37,11 @@ export function MessageList({ items, selected, filter, text, searchRef, onText, 
           onChange={(e) => onText(e.target.value)}
         />
       </div>
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="empty">{EMPTY[filter]}</p>
       ) : (
         <ul className="items">
-          {items.map((q, i) => {
+          {rows.map(({ item: q, reply }, i) => {
             const state = !q.outcome ? 'owed' : q.readAt ? 'read' : 'unread';
             return (
               <li key={q.ref} className={`item-${i < 12 ? i : 'late'}`}>
@@ -48,7 +49,7 @@ export function MessageList({ items, selected, filter, text, searchRef, onText, 
                   role="button"
                   tabIndex={0}
                   aria-current={q.ref === selected}
-                  className={`item ${state} ${q.ref === selected ? 'selected' : ''}`}
+                  className={`item ${state} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''}`}
                   onClick={() => onSelect(q.ref)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -69,10 +70,7 @@ export function MessageList({ items, selected, filter, text, searchRef, onText, 
                     {q.pinned && <span className="pin">pinned</span>}
                     <time>{age(q.settledAt ?? q.raisedAt)}</time>
                   </span>
-                  <span
-                    className="q"
-                    dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }}
-                  />
+                  <span className="q" dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }} />
                   {q.note ? (
                     <span
                       className="a"

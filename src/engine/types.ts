@@ -54,6 +54,8 @@ export type Item = Context & {
   archivedAt: number | null;
   pinned: boolean;
   updatedAt: number;
+  /** The settled item this one follows up on, as its ref; null for one that stands alone. */
+  parent: string | null;
 };
 
 export type Filter = 'inbox' | 'owed' | 'unread' | 'pinned' | 'archived' | 'all';

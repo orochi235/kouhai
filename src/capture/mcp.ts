@@ -40,7 +40,15 @@ const TOOLS = [
           minItems: 1,
           items: {
             type: 'object',
-            properties: { kind: { type: 'string', enum: KINDS }, text: { type: 'string' } },
+            properties: {
+              kind: { type: 'string', enum: KINDS },
+              text: { type: 'string' },
+              parent: {
+                type: 'string',
+                description:
+                  'For a follow-up question: the id of the settled item whose answer it responds to, e.g. q-17.',
+              },
+            },
             required: ['kind', 'text'],
           },
         },
@@ -127,13 +135,15 @@ function attachmentsOf(v: unknown): Attachment[] {
   });
 }
 
-function itemsOf(v: unknown): { kind: Kind; text: string }[] {
+function itemsOf(v: unknown): { kind: Kind; text: string; parent: string | null }[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((i) => {
     if (!i || typeof i !== 'object') return [];
-    const { kind, text: t } = i as Record<string, unknown>;
+    const { kind, text: t, parent } = i as Record<string, unknown>;
     if (!KINDS.includes(kind as Kind) || typeof t !== 'string' || !t.trim()) return [];
-    return [{ kind: kind as Kind, text: t }];
+    return [
+      { kind: kind as Kind, text: t, parent: typeof parent === 'string' && parent ? parent : null },
+    ];
   });
 }
 
@@ -150,7 +160,7 @@ export function callTool(
     const turn = typeof args.turn === 'string' ? args.turn : null;
     const filed = store.take(items, turn, fallback);
     return text(
-      `Filed in the dixeram ledger:\n${filed.map((i) => `${i.ref}: ${i.text}`).join('\n')}\n` +
+      `Filed in the dixeram ledger:\n${filed.map((i) => `${i.ref}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`).join('\n')}\n` +
         'Tell the user in one line what you filed, then `settle` each when it is.',
     );
   }

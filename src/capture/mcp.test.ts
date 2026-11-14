@@ -76,4 +76,19 @@ describe('mcp', () => {
     expect(call(s, 'clear', { id: 'q-1' }).result.isError).toBeUndefined();
     expect(s.counts()).toMatchObject({ unread: 0, inbox: 0 });
   });
+
+  it('threads a follow-up under a settled item, and refuses an owed parent', () => {
+    const s = new Store(':memory:');
+    s.take([{ kind: 'question', text: 'what is a turn?' }], null, fb);
+    const early = call(s, 'take', {
+      items: [{ kind: 'question', text: 'and a session?', parent: 'q-1' }],
+    });
+    expect(early.result.isError).toBe(true);
+    s.settle('q-1', 'answered', 'one prompt and what follows');
+    const r = call(s, 'take', {
+      items: [{ kind: 'question', text: 'and a session?', parent: '1' }],
+    });
+    expect(r.result.content[0]?.text).toContain('q-2 (follows q-1)');
+    expect(s.get('q-2')?.parent).toBe('q-1');
+  });
 });

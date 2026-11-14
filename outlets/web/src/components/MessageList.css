@@ -51,6 +51,24 @@
   cursor: pointer;
 }
 
+.item.reply {
+  padding-left: 34px;
+  border-top: none;
+}
+
+.item.reply::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 0;
+  bottom: 12px;
+  border-left: 1px solid var(--rule);
+}
+
+.item.reply .q {
+  font-size: 16px;
+}
+
 .item:hover {
   background: var(--select);
 }

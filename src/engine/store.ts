@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS items (
   archived_at INTEGER,
   pinned INTEGER NOT NULL DEFAULT 0,
   nagged INTEGER NOT NULL DEFAULT 0,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  parent TEXT
 );
 CREATE INDEX IF NOT EXISTS items_session ON items (session, outcome);`;
 
@@ -97,6 +98,7 @@ function toItem(r: Row): Item {
     archivedAt: n('archived_at'),
     pinned: Boolean(r.pinned),
     updatedAt: Number(r.updated_at),
+    parent: s('parent'),
   };
 }
 
@@ -141,6 +143,9 @@ export class Store {
       }
     }
     this.db.exec(ITEMS);
+    const cols = this.db.prepare('PRAGMA table_info(items)').all() as Row[];
+    if (!cols.some((c) => c.name === 'parent'))
+      this.db.exec('ALTER TABLE items ADD COLUMN parent TEXT');
   }
 
   close() {
@@ -189,19 +194,28 @@ export class Store {
     };
   }
 
-  /** Files items under a turn's context, or under `fallback` when the turn is unknown. */
-  take(items: { kind: Kind; text: string }[], turnId: string | null, fallback: Context): Item[] {
+  /**
+   * Files items under a turn's context, or under `fallback` when the turn is unknown. A `parent`
+   * must name a settled item; it is stored as that item's ref.
+   */
+  take(
+    items: { kind: Kind; text: string; parent?: string | null }[],
+    turnId: string | null,
+    fallback: Context,
+  ): Item[] {
     const turn = turnId ? this.turn(turnId) : null;
     const ctx: Context = turn ?? fallback;
     const at = this.now();
     const insert = this.db.prepare(
-      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at, parent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const out: Item[] = [];
-    for (const { kind, text } of items) {
+    for (const { kind, text, parent } of items) {
       const t = text.trim();
       if (!t) continue;
+      const p = parent ? this.get(parent) : null;
+      if (parent && !p?.outcome) throw new Error(`parent ${parent} is not a settled item`);
       const { lastInsertRowid } = insert.run(
         turn?.id ?? null,
         ctx.session,
@@ -215,6 +229,7 @@ export class Store {
         t,
         at,
         at,
+        p?.ref ?? null,
       );
       out.push(this.get(Number(lastInsertRowid)) as Item);
     }
@@ -326,11 +341,11 @@ export class Store {
     return r?.at == null ? null : Number(r.at);
   }
 
-  /** Questions in a session answered since `since` and not yet read. */
-  answeredSince(session: string, since: number): Item[] {
+  /** Items in a session settled since `since`, read or not, archived or not. */
+  settledSince(session: string, since: number): Item[] {
     const rows = this.db
       .prepare(
-        `SELECT * FROM items WHERE session = ? AND kind = 'question' AND outcome = 'answered' AND ${WHERE.unread} AND settled_at >= ? ORDER BY id`,
+        'SELECT * FROM items WHERE session = ? AND outcome IS NOT NULL AND settled_at >= ? ORDER BY id',
       )
       .all(session, since) as Row[];
     return rows.map(toItem);

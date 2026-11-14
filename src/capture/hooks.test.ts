@@ -81,6 +81,21 @@ describe('promptHook on the turn after an answer', () => {
     expect(next).toContain('`clear`');
     expect(said(s, 'next thing')).not.toContain('`clear`');
   });
+
+  it("offers last turn's answers as parents even once read", () => {
+    let t = 1000;
+    const s = new Store(':memory:', () => t);
+    said(s, 'what is a turn?');
+    s.take([{ kind: 'question', text: 'what is a turn?' }], null, ctx('s1'));
+    t = 2000;
+    s.settle('q-1', 'answered', 'one prompt');
+    s.setRead('q-1');
+    t = 3000;
+    const next = said(s, 'and a session?');
+    expect(next).toContain('q-1');
+    expect(next).toContain('`parent`');
+    expect(next).not.toContain('`clear`');
+  });
 });
 
 describe('stopHook', () => {
