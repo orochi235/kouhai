@@ -26,6 +26,14 @@ export const RULE =
   'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
   'issues, docs, and artifacts by URL.';
 
+/**
+ * Every prompt after a session's first. Each injection stays in context and is re-read by every
+ * later call, so repeating RULE cost a session about 3% of its tokens (2026-11-14); it already sits
+ * in the MCP server's instructions.
+ */
+export const REMINDER =
+  "File its direct questions and unfinished instructions by the filing rule in dixeram's server instructions.";
+
 /** What was settled last turn: parents a follow-up can name, and answers this prompt may show were read. */
 function lastTurnRule(settled: Item[]): string {
   const list = (items: Item[]) => items.map((q) => `${q.ref} ${quote(q.text, 60)}`).join(', ');
@@ -99,7 +107,7 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
         (forced
           ? 'The user marked this prompt with `??`: it asks at least one direct question. '
           : '') +
-        RULE +
+        (since == null ? RULE : REMINDER) +
         (broken
           ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect dixeram fixes it.`
           : '') +

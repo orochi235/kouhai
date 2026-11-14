@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
-import { promptHook, sessionStartHook, stopHook } from './hooks.ts';
+import { promptHook, REMINDER, RULE, sessionStartHook, stopHook } from './hooks.ts';
 
 const payload = (prompt: string) => ({
   session_id: 's1',
@@ -51,6 +51,20 @@ describe('promptHook', () => {
     )?.[1];
     expect(s.turn(id ?? '')).toMatchObject({ session: 's1', harness: 'claude-pw', repo: 'dir' });
     expect(out.systemMessage).toBeUndefined();
+  });
+
+  it("gives the whole rule on a session's first prompt and a short reminder after", () => {
+    let t = 1000;
+    const s = new Store(':memory:', () => t);
+    const first =
+      (promptHook(s, payload('commit it')) as Out).hookSpecificOutput?.additionalContext ?? '';
+    t = 2000;
+    const second =
+      (promptHook(s, payload('and push')) as Out).hookSpecificOutput?.additionalContext ?? '';
+    expect(first).toContain(RULE);
+    expect(second).not.toContain(RULE);
+    expect(second).toContain(REMINDER);
+    expect(second).toMatch(/turn "turn-[0-9a-f]{8}"/);
   });
 
   it('tells the user when a prompt looks like a question', () => {
