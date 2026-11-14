@@ -10,5 +10,3 @@ export const apiBase = () => `http://127.0.0.1:${port()}`;
 export const ARCHIVE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 /** A turn record exists only to carry context to `ask`; one nobody asked from is dropped after this. */
 export const TURN_TTL_MS = 2 * 24 * 60 * 60 * 1000;
-/** The Stop hook only chases questions asked this recently, so a dead session's leftovers don't nag a new one. */
-export const NAG_WINDOW_MS = 12 * 60 * 60 * 1000;

@@ -77,15 +77,15 @@ describe('Store', () => {
     expect(i?.archivedAt).toBeNull();
   });
 
-  it('chases an owed item once, and a key once', () => {
+  it('chases a key once, and knows which prompts it heard', () => {
     const { s } = store();
-    s.take([q('a?'), t('b')], null, ctx);
-    s.settle('q-1', 'answered', 'a');
-    const open = s.unchased('s1', 0);
-    expect(open.map((i) => i.ref)).toEqual(['t-2']);
-    s.markChased(open.map((i) => i.id));
-    expect(s.unchased('s1', 0)).toHaveLength(0);
+    s.addTurn(ctx, 'rename foo');
+    expect(s.heard('s1', 'rename foo')).toBe(true);
+    expect(s.heard('s1', 'rename bar')).toBe(false);
+    expect(s.heard('s2', 'rename foo')).toBe(false);
+    expect(s.chased('m1')).toBe(false);
     expect(s.chaseOnce('m1')).toBe(true);
+    expect(s.chased('m1')).toBe(true);
     expect(s.chaseOnce('m1')).toBe(false);
   });
 

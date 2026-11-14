@@ -1,4 +1,4 @@
-import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
+import { closeSync, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
 
 /** Enough of the transcript's end to hold the current turn. */
 const TAIL_BYTES = 4 * 1024 * 1024;
@@ -82,4 +82,50 @@ export function unledgeredMidTurn(path: string): MidTurn[] {
     }
   }
   return out;
+}
+
+/**
+ * The dixeram tools this session was given, from the transcript's tool-list records: null when
+ * the transcript says nothing about them (no tool search, or not yet connected), and `failed`
+ * when the server failed to connect.
+ */
+export function dixeramTools(path: string): { names: string[]; failed: boolean } | null {
+  let raw: string;
+  try {
+    raw = readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+  const names = new Set<string>();
+  let seen = false;
+  let failed = false;
+  const ours = (v: unknown) =>
+    Array.isArray(v)
+      ? v.filter((n): n is string => typeof n === 'string' && /dixeram__/.test(n))
+      : [];
+  for (const l of raw.split('\n')) {
+    if (!l.includes('"deferred_tools_delta"')) continue;
+    let a: Record<string, unknown> | undefined;
+    try {
+      a = (JSON.parse(l) as Line).attachment;
+    } catch {
+      continue;
+    }
+    if (a?.type !== 'deferred_tools_delta') continue;
+    for (const n of ours(a.addedNames)) {
+      names.add(n);
+      seen = true;
+    }
+    for (const n of ours(a.removedNames)) {
+      names.delete(n);
+      seen = true;
+    }
+    const down =
+      Array.isArray(a.failedMcpServers) &&
+      a.failedMcpServers.some((x) => /dixeram/.test(JSON.stringify(x)));
+    if (down) seen = true;
+    failed = down;
+  }
+  if (!seen) return null;
+  return { names: [...names].map((n) => n.replace(/^.*__/, '')), failed };
 }

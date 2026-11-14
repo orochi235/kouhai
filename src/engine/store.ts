@@ -349,19 +349,18 @@ export class Store {
     return this.get(id);
   }
 
-  /** Items in a session still owed that nobody has chased yet. */
-  unchased(session: string, since: number): Item[] {
-    const rows = this.db
-      .prepare(
-        'SELECT * FROM items WHERE session = ? AND outcome IS NULL AND archived_at IS NULL AND nagged = 0 AND raised_at >= ? ORDER BY id',
-      )
-      .all(session, since) as Row[];
-    return rows.map(toItem);
+  /** Whether this session opened a turn for a prompt, so its message reached the filing rule. */
+  heard(session: string, prompt: string): boolean {
+    return Boolean(
+      this.db
+        .prepare('SELECT 1 FROM turns WHERE session = ? AND prompt = ?')
+        .get(session, prompt.slice(0, PROMPT_CAP)),
+    );
   }
 
-  markChased(ids: number[]) {
-    const stmt = this.db.prepare('UPDATE items SET nagged = 1 WHERE id = ?');
-    for (const id of ids) stmt.run(id);
+  /** Whether a key was already chased, without marking it. */
+  chased(key: string): boolean {
+    return Boolean(this.db.prepare('SELECT 1 FROM chased WHERE key = ?').get(key));
   }
 
   /** Marks a key (a mid-turn message's id) as chased; false when it already was. */

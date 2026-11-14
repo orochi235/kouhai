@@ -1,15 +1,13 @@
 import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
-import { NAG_WINDOW_MS } from '../engine/paths.ts';
 import type { Store } from '../engine/store.ts';
-import { unledgeredMidTurn } from '../engine/transcript.ts';
+import { dixeramTools, unledgeredMidTurn } from '../engine/transcript.ts';
 import type { Item } from '../engine/types.ts';
 
 export type Payload = Record<string, unknown>;
 export type HookOutput = Record<string, unknown> | null;
 
 const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…` : s}"`;
-const refs = (items: Item[]) => items.map((i) => i.ref).join(', ');
 
 /** The filing rule, the same on every prompt and in the MCP server's instructions. */
 export const RULE =
@@ -23,7 +21,7 @@ export const RULE =
   'turn is owed, not deferred: leave it open. Only once `take` has returned ids, say in one line what ' +
   'you filed ("Filed q-17, t-18."), and end an answer in chat with its id ("(q-17 → inbox)"); never ' +
   'announce a filing before it is accepted, and if `take` fails, say it failed rather than naming an ' +
-  'id. Notes are read later, away from this ' +
+  'id. If the `take` tool is not among your tools, say so to the user rather than skipping the filing. Notes are read later, away from this ' +
   'conversation, so make them stand on their own and link generously: every file you name as a ' +
   'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
   'issues, docs, and artifacts by URL.';
@@ -39,6 +37,25 @@ function seenRule(answered: Item[]): string {
   );
 }
 
+/** Once per session, when the tools it was given lack the one the rule names. */
+function missingTake(
+  store: Store,
+  session: string | null,
+  transcript: string | null,
+): string | null {
+  if (!session || !transcript) return null;
+  const key = `no-take:${session}`;
+  if (store.chased(key)) return null;
+  const tools = dixeramTools(transcript);
+  if (!tools || (!tools.failed && tools.names.includes('take'))) return null;
+  store.chaseOnce(key);
+  return tools.failed
+    ? "dixeram's MCP server failed to connect"
+    : tools.names.length
+      ? `dixeram's MCP server is out of date (it offers ${tools.names.join(', ')}, not take)`
+      : "dixeram's tools were removed from this session";
+}
+
 export function promptHook(store: Store, p: Payload, configDir?: string): HookOutput {
   const prompt = typeof p.prompt === 'string' ? p.prompt : '';
   if (!prompt.trim()) return null;
@@ -52,14 +69,17 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const answered = ctx.session && since != null ? store.answeredSince(ctx.session, since) : [];
   const turn = store.addTurn(ctx, prompt);
   const { forced, candidate } = detect(prompt);
+  const broken = missingTake(store, ctx.session, ctx.transcript);
   return {
-    ...(candidate
-      ? {
-          systemMessage: forced
-            ? 'dixeram ▸ marked with ??, so Claude will file this as a question'
-            : 'dixeram ▸ this prompt might hold a question; Claude will file it if so',
-        }
-      : {}),
+    ...(broken
+      ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }
+      : candidate
+        ? {
+            systemMessage: forced
+              ? 'dixeram ▸ marked with ??, so Claude will file this as a question'
+              : 'dixeram ▸ this prompt might hold a question; Claude will file it if so',
+          }
+        : {}),
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
       additionalContext:
@@ -68,50 +88,31 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
           ? 'The user marked this prompt with `??`: it asks at least one direct question. '
           : '') +
         RULE +
+        (broken
+          ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect dixeram fixes it.`
+          : '') +
         (answered.length ? ` ${seenRule(answered)}` : ''),
     },
   };
 }
 
 /**
- * Holds the turn open once for anything that could be lost: items from this session still owed,
- * and messages the user sent mid-turn that the ledger never heard about.
+ * Holds the turn open once, and only for something unfiled: a message the user sent mid-turn
+ * that no prompt hook delivered the filing rule for. Owed items are already in the ledger.
  */
 export function stopHook(store: Store, p: Payload): HookOutput {
   const session = typeof p.session_id === 'string' ? p.session_id : null;
-  if (!session) return null;
-  const owed = store.unchased(session, store.now() - NAG_WINDOW_MS);
-  store.markChased(owed.map((i) => i.id));
   const transcript = typeof p.transcript_path === 'string' ? p.transcript_path : null;
-  const mid = transcript ? unledgeredMidTurn(transcript).filter((m) => store.chaseOnce(m.key)) : [];
-  if (!owed.length && !mid.length) return null;
-
-  const questions = owed.filter((i) => i.kind === 'question');
-  const tasks = owed.filter((i) => i.kind === 'task');
-  const parts: string[] = [];
-  if (questions.length) {
-    parts.push(
-      `${questions.map((q) => `${q.ref} ${quote(q.text)}`).join(', ')} still ${questions.length === 1 ? 'needs' : 'need'} an answer: settle as answered, or deferred with what is known and what is open.`,
-    );
-  }
-  if (tasks.length) {
-    parts.push(
-      `${tasks.map((t) => `${t.ref} ${quote(t.text)}`).join(', ')} ${tasks.length === 1 ? 'is' : 'are'} still owed. If one is done, settle it as done; if dropped or moved to a TODO or issue, settle it so. If it is still waiting, leave it open: that is what owed means.`,
-    );
-  }
-  if (mid.length) {
-    parts.push(
-      `The user sent ${mid.length === 1 ? 'a message' : 'messages'} while you were working: ${mid.map((m) => quote(m.text, 120)).join('; ')}. Check that each instruction in ${mid.length === 1 ? 'it' : 'them'} was carried out; file any that wasn't with \`take\`. An instruction to build something that you have started, yourself or through an agent, is handled: do not file it.`,
-    );
-  }
-  const seen = [
-    ...(owed.length ? [refs(owed)] : []),
-    ...(mid.length ? [`${mid.length} mid-turn ${mid.length === 1 ? 'message' : 'messages'}`] : []),
-  ];
+  if (!session || !transcript) return null;
+  const mid = unledgeredMidTurn(transcript)
+    .filter((m) => !store.heard(session, m.text))
+    .filter((m) => store.chaseOnce(m.key));
+  if (!mid.length) return null;
+  const one = mid.length === 1;
   return {
-    systemMessage: `dixeram ▸ holding the turn open to check ${seen.join(' and ')}`,
+    systemMessage: `dixeram ▸ holding the turn open to check ${mid.length} mid-turn ${one ? 'message' : 'messages'}`,
     decision: 'block',
-    reason: `dixeram: ${parts.join(' ')}`,
+    reason: `dixeram: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. File any direct question or unfinished instruction in ${one ? 'it' : 'them'} with \`take\`. If there is nothing to file, end the turn without saying so.`,
   };
 }
 

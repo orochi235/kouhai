@@ -26,6 +26,22 @@ type Out = {
   hookSpecificOutput?: { additionalContext: string };
 };
 
+const transcript = (lines: object[]) => {
+  const p = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 't.jsonl');
+  writeFileSync(p, lines.map((l) => JSON.stringify(l)).join('\n'));
+  return p;
+};
+const queued = (prompt: string, id: string) => ({
+  type: 'attachment',
+  attachment: {
+    type: 'queued_command',
+    prompt,
+    source_uuid: id,
+    commandMode: 'prompt',
+    humanTurn: true,
+  },
+});
+
 describe('promptHook', () => {
   it('opens a turn on every prompt and names it', () => {
     const s = new Store(':memory:');
@@ -68,28 +84,10 @@ describe('promptHook on the turn after an answer', () => {
 });
 
 describe('stopHook', () => {
-  it('blocks once for owed items, worded per kind', () => {
+  it('says nothing about owed items: they are already filed', () => {
     const s = new Store(':memory:');
-    s.take(
-      [
-        { kind: 'question', text: 'why?' },
-        { kind: 'task', text: 'bump deps' },
-      ],
-      null,
-      ctx('s1'),
-    );
-    const first = stopHook(s, { session_id: 's1' }) as Out;
-    expect(first.decision).toBe('block');
-    expect(first.reason).toContain('q-1');
-    expect(first.reason).toContain('t-2');
-    expect(first.systemMessage).toContain('q-1, t-2');
-    expect(stopHook(s, { session_id: 's1' })).toBeNull();
-  });
-
-  it('ignores other sessions', () => {
-    const s = new Store(':memory:');
-    s.take([{ kind: 'question', text: 'why?' }], null, ctx('s2'));
-    expect(stopHook(s, { session_id: 's1' })).toBeNull();
+    s.take([{ kind: 'task', text: 'bump deps' }], null, ctx('s1'));
+    expect(stopHook(s, { session_id: 's1', transcript_path: '/nowhere.jsonl' })).toBeNull();
   });
 
   it('blocks once for a mid-turn message the ledger never saw', () => {
@@ -116,6 +114,59 @@ describe('stopHook', () => {
     const out = stopHook(s, { session_id: 's1', transcript_path: p }) as Out;
     expect(out.reason).toContain('also rename foo');
     expect(stopHook(s, { session_id: 's1', transcript_path: p })).toBeNull();
+  });
+
+  it('lets a mid-turn message through when its own prompt hook ran', () => {
+    const p = transcript([
+      { type: 'user', origin: { kind: 'human' }, message: { content: 'go' } },
+      queued('is there a test for this?', 'm2'),
+    ]);
+    const s = new Store(':memory:');
+    s.addTurn(ctx('s1'), 'is there a test for this?');
+    expect(stopHook(s, { session_id: 's1', transcript_path: p })).toBeNull();
+  });
+});
+
+describe('promptHook when the tool it names is missing', () => {
+  const delta = (added: string[], removed: string[] = [], failed: string[] = []) => ({
+    type: 'attachment',
+    attachment: {
+      type: 'deferred_tools_delta',
+      addedNames: added,
+      removedNames: removed,
+      failedMcpServers: failed,
+    },
+  });
+  const run = (s: Store, p: string) =>
+    promptHook(s, { ...payload('hi'), transcript_path: p }) as Out;
+
+  it('warns once when the server offers only the old tools', () => {
+    const p = transcript([
+      delta(['mcp__plugin_dixeram_dixeram__ask', 'mcp__plugin_dixeram_dixeram__answer']),
+    ]);
+    const s = new Store(':memory:');
+    const first = run(s, p);
+    expect(first.systemMessage).toMatch(/dixeram ✗ .*out of date.*\/mcp/);
+    expect(first.hookSpecificOutput?.additionalContext).toContain('Nothing can be filed');
+    expect(run(s, p).systemMessage).toBeUndefined();
+  });
+
+  it('warns when the server failed to connect', () => {
+    const p = transcript([delta([], [], ['plugin:dixeram:dixeram'])]);
+    expect(run(new Store(':memory:'), p).systemMessage).toMatch(/failed to connect/);
+  });
+
+  it('stays quiet once a reconnect brings take', () => {
+    const p = transcript([
+      delta(['mcp__plugin_dixeram_dixeram__ask']),
+      delta(['mcp__plugin_dixeram_dixeram__take'], ['mcp__plugin_dixeram_dixeram__ask']),
+    ]);
+    expect(run(new Store(':memory:'), p).systemMessage).toBeUndefined();
+  });
+
+  it('stays quiet when the transcript says nothing about tools', () => {
+    const p = transcript([{ type: 'user', message: { content: 'x' } }]);
+    expect(run(new Store(':memory:'), p).systemMessage).toBeUndefined();
   });
 });
 
