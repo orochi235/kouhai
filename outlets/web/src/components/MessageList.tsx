@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import type { Filter, Item } from '../api.ts';
+import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { age } from '../time.ts';
 import './MessageList.css';
@@ -22,15 +23,6 @@ type Props = {
   onText: (t: string) => void;
   onSelect: (ref: string) => void;
 };
-
-/** A note's opening, flattened, for the preview line. */
-const preview = (md: string) =>
-  md
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#*_`>[\]]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 160);
 
 export function MessageList({ items, selected, filter, text, searchRef, onText, onSelect }: Props) {
   return (
@@ -77,14 +69,20 @@ export function MessageList({ items, selected, filter, text, searchRef, onText, 
                     {q.pinned && <span className="pin">pinned</span>}
                     <time>{age(q.settledAt ?? q.raisedAt)}</time>
                   </span>
-                  <span className="q">{q.text}</span>
-                  <span className="a">
-                    {q.note
-                      ? preview(q.note)
-                      : q.kind === 'task'
-                        ? 'Still owed.'
-                        : 'Claude has not answered yet…'}
-                  </span>
+                  <span
+                    className="q"
+                    dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }}
+                  />
+                  {q.note ? (
+                    <span
+                      className="a"
+                      dangerouslySetInnerHTML={{ __html: renderPreview(q.note) }}
+                    />
+                  ) : (
+                    <span className="a">
+                      {q.kind === 'task' ? 'Still owed.' : 'Claude has not answered yet…'}
+                    </span>
+                  )}
                 </div>
               </li>
             );

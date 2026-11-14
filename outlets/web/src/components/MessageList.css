@@ -138,6 +138,20 @@
   overflow: hidden;
 }
 
+.q code,
+.a code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--select);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.a strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .item.owed .a {
   font-style: italic;
   color: var(--ink-faint);
