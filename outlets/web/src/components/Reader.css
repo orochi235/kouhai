@@ -267,9 +267,25 @@
 
 .enclosures li {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 12px;
   min-width: 0;
+}
+
+.answer img,
+.enclosures .shot {
+  display: block;
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border: 1px solid var(--rule);
+}
+
+.enclosures .shot {
+  flex-basis: 100%;
+  margin-left: calc(9ch + 12px);
+  max-width: calc(100% - 9ch - 12px);
 }
 
 .enclosures .kind {

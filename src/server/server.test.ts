@@ -1,4 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
 import { createServer, notePath } from './server.ts';
@@ -33,6 +36,23 @@ describe('daemon', () => {
       body: JSON.stringify({ id: 'q-1', ref: '/etc/passwd' }),
     });
     expect(r.status).toBe(404);
+  });
+
+  it('serves an image the item attached or its note links, and nothing else', async () => {
+    const { s, base } = await up();
+    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
+    const [shot, linked, other] = ['a.png', 'b.svg', 'c.png'].map((f) => join(dir, f));
+    for (const f of [shot, linked, other]) writeFileSync(f as string, '<svg/>');
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx);
+    s.settle('q-1', 'answered', `see ![b](${linked})`, [{ kind: 'file', ref: shot as string }]);
+    const get = (p: string) => fetch(`${base}/api/image?id=q-1&path=${encodeURIComponent(p)}`);
+    const a = await get(shot as string);
+    expect(a.status).toBe(200);
+    expect(a.headers.get('content-type')).toBe('image/png');
+    expect(a.headers.get('content-security-policy')).toContain('sandbox');
+    expect((await get(linked as string)).headers.get('content-type')).toBe('image/svg+xml');
+    expect((await get(other as string)).status).toBe(404);
+    expect((await get('/etc/passwd')).status).toBe(404);
   });
 
   it('rejects an unknown filter', async () => {

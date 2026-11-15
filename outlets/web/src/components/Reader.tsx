@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Attachment, Item, Outcome } from '../api.ts';
+import { imageUrl, isImagePath } from '../images.ts';
 import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
@@ -67,7 +68,7 @@ export function Reader({
   onReveal,
   onOpenPath,
 }: Props) {
-  const html = useMemo(() => (q?.note ? render(q.note) : ''), [q?.note]);
+  const html = useMemo(() => (q?.note ? render(q.note, q.ref) : ''), [q?.note, q?.ref]);
   if (!q) {
     return (
       <article className="reader blank">
@@ -173,6 +174,9 @@ export function Reader({
                       <button type="button" className="quiet" onClick={() => onReveal(q, a.ref)}>
                         Show in Finder
                       </button>
+                      {isImagePath(a.ref) && (
+                        <img className="shot" src={imageUrl(q.ref, a.ref)} alt={a.label ?? ''} />
+                      )}
                     </>
                   )}
                 </li>

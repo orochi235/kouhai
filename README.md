@@ -36,7 +36,9 @@ its own open items after a long stretch of work or a compaction.
 
 On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `/` search. Opening a settled
 item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
-daemon opens only absolute paths that note itself links.
+daemon opens only absolute paths that note itself links. An attached image, and a local image the
+note shows with `![](/abs/path.png)`, appear inline. A claude.ai artifact stays a link, since
+claude.ai refuses to be framed (`frame-ancestors 'self'`).
 
 ## Layers
 
@@ -57,6 +59,7 @@ API. A browser outlet such as a stream overlay needs only the API:
 | `GET /api/items?filter=owed&repo=&text=&limit=`               | items, counts, and per-repo summaries                               |
 | `GET /api/item?id=t-18`                                       | one item                                                            |
 | `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
+| `GET /api/image?id=q-17&path=`                                | an image the item attached or its note links, and no other          |
 | `POST /api/read`, `/api/archive`, `/api/pin`, `/api/read-all` | `{ id, read \| archived \| pinned }`                                |
 
 ## Install

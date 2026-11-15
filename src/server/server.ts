@@ -1,10 +1,11 @@
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import http from 'node:http';
+import { extname } from 'node:path';
 import { port } from '../engine/paths.ts';
 import { repos } from '../engine/repos.ts';
 import { Store } from '../engine/store.ts';
-import { FILTERS, type Filter } from '../engine/types.ts';
+import { FILTERS, type Filter, type Item } from '../engine/types.ts';
 import type { Handler, Outlet } from './outlet.ts';
 import { serveStatic } from './static.ts';
 
@@ -30,6 +31,42 @@ export function notePath(note: string | null, raw: unknown): string | null {
   if (!path.startsWith('/') || path.includes('/../')) return null;
   if (!note.includes(path)) return null;
   return existsSync(path) ? path : null;
+}
+
+export const IMAGE_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+};
+
+/** An image the page may show for an item: one it attached as a file or render, or its note links. */
+export function itemImage(q: Item, raw: unknown): string | null {
+  if (typeof raw !== 'string' || !IMAGE_TYPES[extname(raw).toLowerCase()]) return null;
+  const attached = q.attachments.some(
+    (a) => a.ref === raw && (a.kind === 'file' || a.kind === 'transom'),
+  );
+  if (attached) return existsSync(raw) ? raw : null;
+  return notePath(q.note, raw);
+}
+
+/** `GET /api/image?id=&path=`: the image's bytes, sandboxed so an SVG can't run as a page here. */
+function image(store: Store, url: URL, res: http.ServerResponse) {
+  const q = store.get(url.searchParams.get('id') ?? '');
+  const path = q ? itemImage(q, url.searchParams.get('path')) : null;
+  if (!path) {
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'no such image on this item' }));
+    return;
+  }
+  res.writeHead(200, {
+    'content-type': IMAGE_TYPES[extname(path).toLowerCase()] as string,
+    'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    'cache-control': 'no-cache',
+  });
+  res.end(readFileSync(path));
 }
 
 /** The ledger API every outlet uses. Nothing here decides how anything looks. */
@@ -127,6 +164,7 @@ export function createServer(store: Store, outlets: Outlet[] = []) {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const key = `${req.method} ${url.pathname}`;
     if (key === 'GET /api/events') return stream(req, res);
+    if (key === 'GET /api/image') return image(store, url, res);
     const handler = table[key];
     if (!handler) {
       const mount = mounts.find((m) => url.pathname.startsWith(m.mount));

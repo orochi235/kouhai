@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { localImages } from './images.ts';
 
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
@@ -8,8 +9,11 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   }
 });
 
-export const render = (md: string) =>
-  DOMPurify.sanitize(marked.parse(md, { async: false, gfm: true }));
+/** A note as HTML; given the item's ref, its local images load from the daemon. */
+export const render = (md: string, ref?: string) =>
+  DOMPurify.sanitize(
+    marked.parse(md, { async: false, gfm: true, walkTokens: ref ? localImages(ref) : null }),
+  );
 
 const INLINE = { ALLOWED_TAGS: ['strong', 'em', 'code', 'del'], KEEP_CONTENT: true };
 
