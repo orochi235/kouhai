@@ -81,6 +81,8 @@ claude plugin install dixeram@dixeram
 
 Run the last two once per Claude config directory (`CLAUDE_CONFIG_DIR=~/.claude-pw claude plugin …`).
 Every harness writes to the same ledger; each item carries the harness it came from.
+On a machine where `dixeram` isn't on PATH, the plugin's hooks do nothing and its MCP server is an empty
+stand-in that says how to install, so sessions start without errors.
 
 ## CLI
 

@@ -1,14 +1,13 @@
 {
   "name": "dixeram",
   "description": "A ledger of what Claude sessions owe you: direct questions, and instructions not yet carried out",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": { "name": "Michael Baker", "email": "contact@michaelbaker.tech" },
   "license": "MIT",
   "keywords": ["questions", "inbox", "answers", "hooks", "mcp"],
   "mcpServers": {
     "dixeram": {
-      "command": "dixeram",
-      "args": ["mcp"]
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/mcp"
     }
   }
 }
