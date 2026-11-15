@@ -19,8 +19,8 @@ export function ownWords(prompt: string): string {
 }
 
 export function detect(prompt: string): Detection {
-  const forced = /^\s*\?\?/.test(prompt);
-  if (forced) return { forced, candidate: true };
   const own = ownWords(prompt);
+  const forced = /^\s*\?\?/.test(prompt) || own.includes('(??)');
+  if (forced) return { forced, candidate: true };
   return { forced, candidate: own.includes('?') || WH.test(own) };
 }

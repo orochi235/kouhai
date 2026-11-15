@@ -30,8 +30,8 @@ says where. Work still waiting on a later turn stays owed.
 The MCP server Claude Code keeps running is only a relay: each request runs in a fresh process, so
 a session started before a change still gets the current tools, and is told when they change.
 
-Start a prompt with `??` to have its question filed whatever the rule says, for instance a
-"what's next?" you want a lasting answer to; the rule otherwise skips those.
+Start a prompt with `??`, or put `(??)` anywhere in it, to have its question filed whatever the
+rule says, for instance a "what's next?" you want a lasting answer to; the rule otherwise skips those.
 
 Each stage says what it did in the transcript: the hooks print a `dixeram ▸` line, Claude says
 what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list

@@ -27,4 +27,10 @@ describe('detect', () => {
   it('forces on a leading ??', () => {
     expect(detect('?? the port is 8771 right')).toEqual({ forced: true, candidate: true });
   });
+
+  it("forces on (??) anywhere in the user's own words, not in code or a paste", () => {
+    expect(detect("fix the lint, then what's next (??)").forced).toBe(true);
+    expect(detect('run `echo (??)` and commit').forced).toBe(false);
+    expect(detect('<pasted_content id="1">(??)</pasted_content> summarize').forced).toBe(false);
+  });
 });
