@@ -15,7 +15,7 @@ export const RULE =
   '(2) any instruction you will not finish before this turn ends, kind "task" (one queued behind ' +
   'other work, one meant for later, or one that arrives mid-turn while you are busy). An instruction ' +
   'you carry out in this turn needs no filing, and neither does an instruction to build something that ' +
-  'you start this turn, yourself or through an agent. A filed item stays owed until it is settled: a question ' +
+  'you start this turn, yourself or through an agent. Two kinds of question are not filed either: one asking what to work on next ("anything on the TODO list?", "anything to pick up?"), which is session logistics; and one about how an implementation detail works, when answering it leads into work in the same turn. A filed item stays owed until it is settled: a question ' +
   'as answered, a task as done, either as dropped (with why), or as deferred, which means moved to ' +
   'another durable home such as a TODO entry or an issue (say where). Work still waiting on a later ' +
   'turn is owed, not deferred: leave it open. Only once `take` has returned ids, say in one line what ' +
