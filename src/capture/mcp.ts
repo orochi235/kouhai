@@ -78,7 +78,7 @@ const TOOLS = [
       'Settle an item. A question settles as answered, a task as done; either can be dropped or ' +
       'deferred (moved to another durable home: a TODO entry, an issue; say where). Work still waiting on a later turn is not deferred: leave it owed. The note is markdown, linked generously (files as markdown links to absolute paths; commits, PRs, issues, docs, and artifacts by URL), read away from this conversation: for an answer, lead with the ' +
       'answer and give the context needed; for a task, what was done (commits, files); for dropped or ' +
-      'deferred, why, and where it went. Settling again replaces the note, keeps attachments, and marks ' +
+      'deferred, why, and where it went. A line saying work landed in a commit starts with ✅ and links the commit to its GitHub page (`https://github.com/<owner>/<repo>/commit/<sha>`, from `git remote get-url origin`); with no GitHub remote, give the short sha in backticks. Settling again replaces the note, keeps attachments, and marks ' +
       'it unread. Attach richer material (a claude.ai artifact URL, a file, a link) with `attachments`.',
     inputSchema: {
       type: 'object',
