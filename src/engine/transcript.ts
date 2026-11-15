@@ -129,3 +129,24 @@ export function dixeramTools(path: string): { names: string[]; failed: boolean }
   if (!seen) return null;
   return { names: [...names].map((n) => n.replace(/^.*__/, '')), failed };
 }
+
+/** The refs `take` returned anywhere in a transcript, read from its tool results. */
+export function filedRefs(path: string): string[] {
+  const refs = new Set<string>();
+  for (const l of tail(path)) {
+    const content = l.type === 'user' ? l.message?.content : null;
+    if (!Array.isArray(content)) continue;
+    for (const c of content as { type?: string; content?: unknown }[]) {
+      if (c.type !== 'tool_result') continue;
+      const body =
+        typeof c.content === 'string'
+          ? c.content
+          : Array.isArray(c.content)
+            ? (c.content as { text?: unknown }[]).map((t) => String(t.text ?? '')).join('\n')
+            : '';
+      if (!body.startsWith('Filed in the dixeram ledger:')) continue;
+      for (const m of body.matchAll(/^([qt]-\d+)\b/gm)) refs.add(m[1] as string);
+    }
+  }
+  return [...refs];
+}

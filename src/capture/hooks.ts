@@ -1,7 +1,7 @@
 import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
-import { dixeramTools, unledgeredMidTurn } from '../engine/transcript.ts';
+import { dixeramTools, filedRefs, unledgeredMidTurn } from '../engine/transcript.ts';
 import type { Item } from '../engine/types.ts';
 
 export type Payload = Record<string, unknown>;
@@ -133,6 +133,26 @@ export function stopHook(store: Store, p: Payload): HookOutput {
     systemMessage: `dixeram ▸ holding the turn open to check ${mid.length} mid-turn ${one ? 'message' : 'messages'}`,
     decision: 'block',
     reason: `dixeram: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. File any direct question or unfinished instruction in ${one ? 'it' : 'them'} with \`take\`. If there is nothing to file, end the turn without saying so.`,
+  };
+}
+
+/**
+ * A subagent gets no prompt hook and its parent never sees its tool calls, so whatever it filed
+ * and left owed would sit unchased. Holds it open once to settle them or hand them up.
+ */
+export function subagentStopHook(store: Store, p: Payload): HookOutput {
+  const transcript = typeof p.agent_transcript_path === 'string' ? p.agent_transcript_path : null;
+  if (!transcript) return null;
+  const owed = filedRefs(transcript)
+    .map((ref) => store.get(ref))
+    .filter((i): i is Item => Boolean(i && !i.outcome));
+  if (!owed.length || !store.chaseOnce(`subagent:${p.agent_id ?? transcript}`)) return null;
+  return {
+    decision: 'block',
+    reason:
+      `dixeram: you filed ${owed.map((i) => `${i.ref} ${quote(i.text, 60)}`).join('; ')}, still owed. ` +
+      'Settle each you have finished with `settle`. For any you have not, say in your final report ' +
+      'that it is still owed, with its id, so the agent that started you carries it.',
   };
 }
 

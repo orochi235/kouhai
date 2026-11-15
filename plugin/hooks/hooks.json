@@ -30,6 +30,16 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v dixeram >/dev/null 2>&1 && dixeram hook subagent-stop || exit 0"
+          }
+        ]
+      }
     ]
   }
 }

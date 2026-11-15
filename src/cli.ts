@@ -1,7 +1,13 @@
 import { execFile } from 'node:child_process';
 import { menubar } from '../outlets/menubar/outlet.ts';
 import { web } from '../outlets/web/outlet.ts';
-import { type Payload, promptHook, sessionStartHook, stopHook } from './capture/hooks.ts';
+import {
+  type Payload,
+  promptHook,
+  sessionStartHook,
+  stopHook,
+  subagentStopHook,
+} from './capture/hooks.ts';
 import { respond, serve } from './capture/mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
 import { idOf, Store } from './engine/store.ts';
@@ -19,7 +25,7 @@ const USAGE = `dixeram: a ledger of what Claude sessions owe you
   dixeram daemon                     serve the inbox page on :${port()}
   dixeram mcp                        the MCP server Claude Code starts (a relay)
   dixeram mcp-call                   answer one MCP request from stdin, for the relay
-  dixeram hook prompt|stop|session-start  the hooks Claude Code runs`;
+  dixeram hook prompt|stop|subagent-stop|session-start  the hooks Claude Code runs`;
 
 async function stdin(): Promise<Payload> {
   let raw = '';
@@ -72,9 +78,11 @@ async function main(argv: string[]) {
             ? promptHook(store, p, process.env.CLAUDE_CONFIG_DIR)
             : rest[0] === 'stop'
               ? stopHook(store, p)
-              : rest[0] === 'session-start'
-                ? sessionStartHook(store, p)
-                : null;
+              : rest[0] === 'subagent-stop'
+                ? subagentStopHook(store, p)
+                : rest[0] === 'session-start'
+                  ? sessionStartHook(store, p)
+                  : null;
         if (out) process.stdout.write(`${JSON.stringify(out)}\n`);
       } finally {
         store.close();

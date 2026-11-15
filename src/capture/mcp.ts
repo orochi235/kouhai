@@ -15,7 +15,7 @@ import {
 } from '../engine/types.ts';
 import { RULE } from './hooks.ts';
 
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 
 const INSTRUCTIONS =
   "dixeram is a ledger of what you owe the user: their direct questions, and instructions you haven't " +
