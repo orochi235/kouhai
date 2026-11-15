@@ -258,16 +258,40 @@ export function respond(store: Store, line: string): string | null {
   return out ? JSON.stringify(out) : null;
 }
 
+/** A child that dies or stalls would otherwise leave Claude Code waiting 30 minutes for a reply. */
+export const CALL_TIMEOUT_MS = 15_000;
+
+type Ran = { stdout?: string | null; stderr?: string | null; status: number | null; error?: Error };
+
+/** What the relay sends back for a request: the child's reply, or an error saying why there is none. */
+export function relayReply(msg: Rpc, ran: Ran): string {
+  const out = ran.stdout?.trim() ?? '';
+  if (out) return out;
+  const why = ran.error
+    ? ran.error.message
+    : `mcp-call exited ${ran.status ?? 'on a signal'}${ran.stderr?.trim() ? `: ${ran.stderr.trim().split('\n').slice(-3).join(' ')}` : ' with no reply'}`;
+  const message = `dixeram: ${why}`;
+  return JSON.stringify(
+    msg.method === 'tools/call'
+      ? { jsonrpc: '2.0', id: msg.id, result: text(message, true) }
+      : { jsonrpc: '2.0', id: msg.id, error: { code: -32603, message } },
+  );
+}
+
 /**
  * The long-lived server is only a relay: each request runs in a fresh `dixeram mcp-call`, so a
  * session started before a change still gets current code, and is told when the tools change.
  */
 export function serve(): void {
-  const relay = (line: string) =>
-    spawnSync(process.execPath, [...process.execArgv, process.argv[1] ?? '', 'mcp-call'], {
-      input: line,
-      encoding: 'utf8',
-    }).stdout.trim();
+  const relay = (line: string, msg: Rpc) =>
+    relayReply(
+      msg,
+      spawnSync(process.execPath, [...process.execArgv, process.argv[1] ?? '', 'mcp-call'], {
+        input: line,
+        encoding: 'utf8',
+        timeout: CALL_TIMEOUT_MS,
+      }),
+    );
   const toolsOf = (reply: string) => {
     try {
       return JSON.stringify(JSON.parse(reply).result?.tools ?? null);
@@ -285,11 +309,12 @@ export function serve(): void {
       return;
     }
     if (msg.id === undefined) return;
-    const reply = relay(line);
-    if (reply) process.stdout.write(`${reply}\n`);
+    const reply = relay(line, msg);
+    process.stdout.write(`${reply}\n`);
     if (msg.method === 'tools/list') listed = toolsOf(reply);
     if (msg.method === 'tools/call' && listed !== null) {
-      const now = toolsOf(relay(JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'tools/list' })));
+      const list: Rpc = { jsonrpc: '2.0', id: 0, method: 'tools/list' };
+      const now = toolsOf(relay(JSON.stringify(list), list));
       if (now !== null && now !== listed) {
         listed = now;
         process.stdout.write(

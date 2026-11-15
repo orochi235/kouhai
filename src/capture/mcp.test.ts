@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
-import { handle } from './mcp.ts';
+import { handle, relayReply } from './mcp.ts';
 
 const fb = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
 
@@ -90,5 +90,32 @@ describe('mcp', () => {
     });
     expect(r.result.content[0]?.text).toContain('q-2 (follows q-1)');
     expect(s.get('q-2')?.parent).toBe('q-1');
+  });
+});
+
+describe('relay', () => {
+  const callMsg = { jsonrpc: '2.0' as const, id: 7, method: 'tools/call' };
+
+  it("passes the child's reply through", () => {
+    expect(relayReply(callMsg, { stdout: '{"ok":1}\n', status: 0 })).toBe('{"ok":1}');
+  });
+
+  it('answers a tool call the child left unanswered with a tool error naming why', () => {
+    const out = JSON.parse(
+      relayReply(callMsg, { stdout: '', stderr: 'boom\nSyntaxError: bad', status: 1 }),
+    );
+    expect(out.id).toBe(7);
+    expect(out.result.isError).toBe(true);
+    expect(out.result.content[0].text).toContain('exited 1: boom SyntaxError: bad');
+  });
+
+  it('answers any other request with a JSON-RPC error, including a timeout', () => {
+    const out = JSON.parse(
+      relayReply(
+        { jsonrpc: '2.0', id: 3, method: 'tools/list' },
+        { stdout: null, status: null, error: new Error('spawnSync node ETIMEDOUT') },
+      ),
+    );
+    expect(out.error.message).toBe('dixeram: spawnSync node ETIMEDOUT');
   });
 });
