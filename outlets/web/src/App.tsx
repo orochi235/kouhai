@@ -137,6 +137,7 @@ export function App() {
         rows={rows}
         selected={selected}
         filter={filter}
+        kind={kind}
         text={text}
         searchRef={search}
         onText={setText}

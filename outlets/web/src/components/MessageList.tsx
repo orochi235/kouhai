@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { Filter, Item } from '../api.ts';
+import type { Filter, Item, Kind } from '../api.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import type { Row } from '../thread.ts';
@@ -15,17 +15,32 @@ const EMPTY: Record<Filter, string> = {
   all: 'Nothing yet.',
 };
 
+const EMPTY_BOX: Record<Kind, string> = {
+  question: 'No questions. Ask Claude something mid-task and it lands here.',
+  task: 'No tasks. Queue up work for Claude and it lands here.',
+};
+
 type Props = {
   rows: Row[];
   selected: string | null;
   filter: Filter;
+  kind: Kind | null;
   text: string;
   searchRef: RefObject<HTMLInputElement | null>;
   onText: (t: string) => void;
   onSelect: (ref: string) => void;
 };
 
-export function MessageList({ rows, selected, filter, text, searchRef, onText, onSelect }: Props) {
+export function MessageList({
+  rows,
+  selected,
+  filter,
+  kind,
+  text,
+  searchRef,
+  onText,
+  onSelect,
+}: Props) {
   return (
     <section className="list">
       <div className="search">
@@ -38,7 +53,7 @@ export function MessageList({ rows, selected, filter, text, searchRef, onText, o
         />
       </div>
       {rows.length === 0 ? (
-        <p className="empty">{EMPTY[filter]}</p>
+        <p className="empty">{filter === 'inbox' && kind ? EMPTY_BOX[kind] : EMPTY[filter]}</p>
       ) : (
         <ul className="items">
           {rows.map(({ item: q, reply }, i) => {
