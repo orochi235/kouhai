@@ -9,5 +9,3 @@
 - **Richer notes on the page.** An `artifact` attachment is only a link, and a `transom` or image
   `file` is only a path; the reader could embed the artifact and show images inline, served by the
   daemon from attached paths only. (2026-11-13)
-- **Owed and unread counts in the Claude status line.** The menu bar shows them; the status line
-  could too, from `sqlite3 ~/.dixeram/inbox.db` so it costs no Node start. (2026-11-13)
