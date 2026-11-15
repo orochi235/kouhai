@@ -34,7 +34,10 @@ Each stage says what it did in the transcript: the hooks print a `dixeram ▸` l
 what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list
 its own open items after a long stretch of work or a compaction.
 
-On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `/` search. Opening a settled
+On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `m` misfiled, `/` search.
+**Misfiled** marks an item that should never have been filed, with an optional reason, and
+archives it; the ten latest go into the MCP server's instructions as examples of what not to
+file, so a new session learns from them (`dixeram misfile <id> [why]` does the same). Opening a settled
 item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
 daemon opens only absolute paths that note itself links. An attached image, and a local image the
 note shows with `![](/abs/path.png)`, appear inline. A claude.ai artifact stays a link, since
@@ -61,6 +64,7 @@ API. A browser outlet such as a stream overlay needs only the API:
 | `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
 | `GET /api/image?id=q-17&path=`                                | an image the item attached or its note links, and no other          |
 | `POST /api/read`, `/api/archive`, `/api/pin`, `/api/read-all` | `{ id, read \| archived \| pinned }`                                |
+| `POST /api/misfile`                                           | `{ id, misfiled, why }`                                             |
 
 ## Install
 

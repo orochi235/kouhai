@@ -56,6 +56,10 @@ export type Item = Context & {
   updatedAt: number;
   /** The settled item this one follows up on, as its ref; null for one that stands alone. */
   parent: string | null;
+  /** When the user marked it as something that should never have been filed. */
+  misfiledAt: number | null;
+  /** Their reason, if they gave one. */
+  misfiledWhy: string | null;
 };
 
 export type Filter = 'inbox' | 'owed' | 'unread' | 'pinned' | 'archived' | 'all';

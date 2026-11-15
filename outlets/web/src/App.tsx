@@ -16,6 +16,7 @@ export function App() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRef);
   const [offline, setOffline] = useState(false);
+  const [askMisfile, setAskMisfile] = useState(0);
   const version = useRef('');
   const search = useRef<HTMLInputElement>(null);
 
@@ -102,6 +103,7 @@ export function App() {
         act('archive', current, !current.archivedAt);
       } else if (current && e.key === 'u') act('read', current, !current.readAt);
       else if (current && e.key === 'p') act('pin', current, !current.pinned);
+      else if (current && e.key === 'm') setAskMisfile((n) => n + 1);
       else return;
       e.preventDefault();
     };
@@ -146,6 +148,12 @@ export function App() {
         onUnread={(q) => act('read', q, !q.readAt)}
         onReveal={(q, ref) => api.post('reveal', { id: q.ref, ref })}
         onOpenPath={(q, path) => api.post('open-path', { id: q.ref, path })}
+        askMisfile={askMisfile}
+        onMisfile={async (q, misfiled, why) => {
+          if (misfiled && q.ref === current?.ref) move(1);
+          await api.post('misfile', { id: q.ref, misfiled, why });
+          load();
+        }}
       />
     </div>
   );

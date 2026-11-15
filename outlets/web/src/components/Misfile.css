@@ -1,0 +1,36 @@
+.misfile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.misfile input {
+  font: inherit;
+  font-family: var(--serif);
+  font-size: 14px;
+  width: 30ch;
+  padding: 3px 8px;
+  color: var(--ink);
+  background: var(--paper-sheet);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.misfile input:focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 0;
+}
+
+.misfiled-note {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 18px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.misfiled-note .chip {
+  font-style: normal;
+  color: var(--stamp);
+}

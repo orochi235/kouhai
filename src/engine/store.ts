@@ -44,7 +44,9 @@ CREATE TABLE IF NOT EXISTS items (
   pinned INTEGER NOT NULL DEFAULT 0,
   nagged INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL,
-  parent TEXT
+  parent TEXT,
+  misfiled_at INTEGER,
+  misfiled_why TEXT
 );
 CREATE INDEX IF NOT EXISTS items_session ON items (session, outcome);`;
 
@@ -99,6 +101,8 @@ function toItem(r: Row): Item {
     pinned: Boolean(r.pinned),
     updatedAt: Number(r.updated_at),
     parent: s('parent'),
+    misfiledAt: n('misfiled_at'),
+    misfiledWhy: s('misfiled_why'),
   };
 }
 
@@ -146,6 +150,10 @@ export class Store {
     const cols = this.db.prepare('PRAGMA table_info(items)').all() as Row[];
     if (!cols.some((c) => c.name === 'parent'))
       this.db.exec('ALTER TABLE items ADD COLUMN parent TEXT');
+    if (!cols.some((c) => c.name === 'misfiled_at'))
+      this.db.exec(
+        'ALTER TABLE items ADD COLUMN misfiled_at INTEGER; ALTER TABLE items ADD COLUMN misfiled_why TEXT',
+      );
   }
 
   close() {
@@ -323,6 +331,38 @@ export class Store {
       .prepare('UPDATE items SET pinned = ?, updated_at = ? WHERE id = ?')
       .run(pinned ? 1 : 0, this.now(), id);
     return this.get(id);
+  }
+
+  /**
+   * Marks an item as one that should never have been filed, with the user's reason, and archives
+   * it; `false` undoes both. Recent misfiles teach later sessions what not to file.
+   */
+  setMisfiled(ref: string | number, misfiled = true, why: string | null = null) {
+    const id = idOf(ref);
+    if (id == null) return null;
+    const at = this.now();
+    this.db
+      .prepare(
+        'UPDATE items SET misfiled_at = ?, misfiled_why = ?, archived_at = ?, updated_at = ? WHERE id = ?',
+      )
+      .run(
+        misfiled ? at : null,
+        misfiled ? why?.trim() || null : null,
+        misfiled ? at : null,
+        at,
+        id,
+      );
+    return this.get(id);
+  }
+
+  /** The latest misfiles, newest first, for the filing instructions. */
+  misfiles(limit = 10): Item[] {
+    const rows = this.db
+      .prepare(
+        'SELECT * FROM items WHERE misfiled_at IS NOT NULL ORDER BY misfiled_at DESC LIMIT ?',
+      )
+      .all(limit) as Row[];
+    return rows.map(toItem);
   }
 
   readAll(): number {

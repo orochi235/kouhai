@@ -19,6 +19,7 @@ const USAGE = `dixeram: a ledger of what Claude sessions owe you
   dixeram ls [${FILTERS.join('|')}]   list items (default: unread)
   dixeram show <id>                  print one item and how it was settled
   dixeram read <id>...               mark settled items read
+  dixeram misfile <id> [why]         mark an item as filed by mistake (--undo to reverse)
   dixeram open [q-id]                open the inbox page
   dixeram prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
@@ -111,6 +112,15 @@ async function main(argv: string[]) {
     case 'read': {
       const store = new Store();
       for (const r of rest) if (!store.setRead(r)) console.error(`no item ${r}`);
+      return;
+    }
+    case 'misfile': {
+      const undo = rest.includes('--undo');
+      const [ref, ...why] = rest.filter((a) => a !== '--undo');
+      if (!ref) return console.error('usage: dixeram misfile <id> [why]');
+      const q = new Store().setMisfiled(ref, !undo, why.join(' ') || null);
+      if (!q) return console.error(`no item ${ref}`);
+      console.log(undo ? `${q.ref} restored` : `${q.ref} marked misfiled and archived`);
       return;
     }
     case 'open': {

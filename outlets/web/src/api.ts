@@ -24,7 +24,10 @@ export const api = {
     if (text) q.set('text', text);
     return fetch(`/api/items?${q}`).then((r) => json<Listing>(r));
   },
-  post: (path: 'read' | 'archive' | 'pin' | 'read-all' | 'reveal' | 'open-path', body: object) =>
+  post: (
+    path: 'read' | 'archive' | 'pin' | 'misfile' | 'read-all' | 'reveal' | 'open-path',
+    body: object,
+  ) =>
     fetch(`/api/${path}`, { method: 'POST', body: JSON.stringify(body) }).then((r) =>
       json<unknown>(r),
     ),

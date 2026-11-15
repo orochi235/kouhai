@@ -99,6 +99,12 @@ export function routes(store: Store): Record<string, Handler> {
     'POST /api/read': (_q, b) => store.setRead(need(b.id).id, b.read !== false),
     'POST /api/archive': (_q, b) => store.setArchived(need(b.id).id, b.archived !== false),
     'POST /api/pin': (_q, b) => store.setPinned(need(b.id).id, b.pinned !== false),
+    'POST /api/misfile': (_q, b) =>
+      store.setMisfiled(
+        need(b.id).id,
+        b.misfiled !== false,
+        typeof b.why === 'string' ? b.why : null,
+      ),
     'POST /api/read-all': () => ({ marked: store.readAll() }),
     'POST /api/reveal': (_q, b) => {
       const q = need(b.id);

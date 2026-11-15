@@ -22,6 +22,21 @@ const INSTRUCTIONS =
   'carried out yet. They read it later, so nothing asked mid-task gets lost. Answer in chat as usual too. ' +
   RULE;
 
+const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+
+/** The instructions, plus what the user marked as filed by mistake, so sessions learn from it. */
+export function instructions(store: Store): string {
+  const misfiled = store.misfiles();
+  if (!misfiled.length) return INSTRUCTIONS;
+  const list = misfiled
+    .map(
+      (i) =>
+        `${i.kind} "${clip(i.text, 90)}"${i.misfiledWhy ? ` (${clip(i.misfiledWhy, 120)})` : ''}`,
+    )
+    .join('; ');
+  return `${INSTRUCTIONS} The user marked these as filed by mistake, with their reason where they gave one; don't file items like them: ${list}.`;
+}
+
 const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
 
 const TOOLS = [
@@ -215,7 +230,7 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
         protocolVersion: msg.params?.protocolVersion ?? '2025-06-18',
         capabilities: { tools: { listChanged: true } },
         serverInfo: { name: 'dixeram', version: VERSION },
-        instructions: INSTRUCTIONS,
+        instructions: instructions(store),
       });
     case 'ping':
       return reply({});

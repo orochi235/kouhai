@@ -138,3 +138,24 @@ describe('Store', () => {
     expect(new Set([v0, v1, s.version()]).size).toBe(3);
   });
 });
+
+describe('misfiles', () => {
+  it('marks an item misfiled with its reason, archives it, and undoes both', () => {
+    const s = new Store(':memory:');
+    const [q] = s.take([{ kind: 'question', text: 'what?' }], null, {
+      session: 's',
+      harness: null,
+      cwd: null,
+      root: null,
+      repo: null,
+      transcript: null,
+    });
+    const marked = s.setMisfiled(q?.ref ?? '', true, '  rhetorical  ');
+    expect(marked).toMatchObject({ misfiledWhy: 'rhetorical' });
+    expect(marked?.archivedAt).not.toBeNull();
+    expect(s.misfiles().map((i) => i.ref)).toEqual([q?.ref]);
+    const undone = s.setMisfiled(q?.ref ?? '', false);
+    expect(undone).toMatchObject({ misfiledAt: null, misfiledWhy: null, archivedAt: null });
+    expect(s.misfiles()).toEqual([]);
+  });
+});

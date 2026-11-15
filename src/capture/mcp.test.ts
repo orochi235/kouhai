@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
-import { handle, relayReply } from './mcp.ts';
+import { handle, instructions, relayReply } from './mcp.ts';
 
 const fb = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
 
@@ -117,5 +117,16 @@ describe('relay', () => {
       ),
     );
     expect(out.error.message).toBe('dixeram: spawnSync node ETIMEDOUT');
+  });
+});
+
+describe('instructions', () => {
+  it("quote the user's misfiles and reasons so later sessions learn from them", () => {
+    const s = new Store(':memory:');
+    const plain = instructions(s);
+    expect(plain).not.toContain('by mistake');
+    s.take([{ kind: 'task', text: 'rename the var' }], null, fb);
+    s.setMisfiled('t-1', true, 'did it the same turn');
+    expect(instructions(s)).toContain('task "rename the var" (did it the same turn)');
   });
 });

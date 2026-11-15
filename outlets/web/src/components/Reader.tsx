@@ -5,6 +5,7 @@ import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
 import { Follows } from './Follows.tsx';
+import { MisfileButton, MisfiledNote } from './Misfile.tsx';
 import './Reader.css';
 
 type Props = {
@@ -17,6 +18,9 @@ type Props = {
   onUnread: (q: Item) => void;
   onReveal: (q: Item, ref: string) => void;
   onOpenPath: (q: Item, path: string) => void;
+  onMisfile: (q: Item, misfiled: boolean, why: string) => void;
+  /** Bumped by the `m` key. */
+  askMisfile: number;
 };
 
 const BRAINHOUSE = 'http://localhost:8765';
@@ -67,6 +71,8 @@ export function Reader({
   onUnread,
   onReveal,
   onOpenPath,
+  onMisfile,
+  askMisfile,
 }: Props) {
   const html = useMemo(() => (q?.note ? render(q.note, q.ref) : ''), [q?.note, q?.ref]);
   if (!q) {
@@ -89,6 +95,7 @@ export function Reader({
         <button type="button" className="quiet" onClick={() => onPin(q)}>
           {q.pinned ? 'Unpin' : 'Pin'}
         </button>
+        <MisfileButton item={q} ask={askMisfile} onMisfile={onMisfile} />
         <button type="button" className="quiet" onClick={() => onArchive(q)}>
           {q.archivedAt ? 'Unarchive' : 'Archive'}
         </button>
@@ -96,6 +103,7 @@ export function Reader({
 
       <div className="sheet">
         <header className="envelope">
+          <MisfiledNote item={q} />
           {q.parent && <Follows of={q.parent} parent={parent} onSelect={onSelect} />}
           <div className="re-row">
             <p className="re">{q.kind === 'task' ? 'You told it to' : 'You asked'}</p>
