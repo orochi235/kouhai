@@ -105,7 +105,7 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
       additionalContext:
         `dixeram, turn "${turn.id}" (pass it to \`take\`). ` +
         (forced
-          ? 'The user marked this prompt with `??`: it asks at least one direct question. '
+          ? 'The user started this prompt with `??`: it asks at least one direct question, and they want it filed and answered in a note that stands on its own, even where the filing rule would skip it (a what-to-work-on-next question, say). '
           : '') +
         (since == null ? RULE : REMINDER) +
         (broken

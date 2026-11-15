@@ -74,6 +74,16 @@ describe('promptHook', () => {
   });
 });
 
+describe('promptHook with ??', () => {
+  it('asks for the question to be filed even where the rule would skip it', () => {
+    const out = promptHook(new Store(':memory:'), payload("?? what's next?")) as Out;
+    expect(out.systemMessage).toContain('marked with ??');
+    expect(out.hookSpecificOutput?.additionalContext).toContain(
+      'even where the filing rule would skip it',
+    );
+  });
+});
+
 describe('promptHook on the turn after an answer', () => {
   const said = (s: Store, prompt: string) =>
     (promptHook(s, payload(prompt)) as Out).hookSpecificOutput?.additionalContext ?? '';
