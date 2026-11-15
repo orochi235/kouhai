@@ -62,7 +62,7 @@ API. A browser outlet such as a stream overlay needs only the API:
 
 | Endpoint                                                      | Gives                                                               |
 | ------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `GET /api/items?filter=owed&repo=&text=&limit=`               | items, counts, and per-repo summaries                               |
+| `GET /api/items?filter=owed&kind=task&repo=&text=&limit=`     | items, counts, and per-repo summaries                               |
 | `GET /api/item?id=t-18`                                       | one item                                                            |
 | `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
 | `GET /api/image?id=q-17&path=`                                | an image the item attached or its note links, and no other          |
@@ -87,7 +87,7 @@ stand-in that says how to install, so sessions start without errors.
 ## CLI
 
 ```
-dixeram ls [inbox|owed|unread|pinned|archived|all]
+dixeram ls [inbox|owed|unread|pinned|archived|all] [questions|tasks]
 dixeram show t-18
 dixeram read q-17
 dixeram open [q-17]

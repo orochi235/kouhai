@@ -5,7 +5,7 @@ import { extname } from 'node:path';
 import { port } from '../engine/paths.ts';
 import { repos } from '../engine/repos.ts';
 import { Store } from '../engine/store.ts';
-import { FILTERS, type Filter, type Item } from '../engine/types.ts';
+import { FILTERS, type Filter, type Item, KINDS, type Kind } from '../engine/types.ts';
 import type { Handler, Outlet } from './outlet.ts';
 import { serveStatic } from './static.ts';
 
@@ -83,6 +83,9 @@ export function routes(store: Store): Record<string, Handler> {
     'GET /api/items': (q) => {
       const f = (q.get('filter') ?? 'inbox') as Filter;
       if (!FILTERS.includes(f)) throw new HttpError(400, `filter is one of ${FILTERS.join(', ')}`);
+      const kind = q.get('kind') || undefined;
+      if (kind && !KINDS.includes(kind as Kind))
+        throw new HttpError(400, `kind is one of ${KINDS.join(', ')}`);
       const limit = q.get('limit');
       return {
         version: store.version(),
@@ -91,6 +94,7 @@ export function routes(store: Store): Record<string, Handler> {
         items: store.list(f, {
           repo: q.get('repo') ?? undefined,
           text: q.get('text') ?? undefined,
+          kind: kind as Kind | undefined,
           limit: limit ? Math.min(500, Math.max(1, Number(limit) || 1)) : undefined,
         }),
       };

@@ -282,10 +282,14 @@ export class Store {
 
   list(
     filter: Filter = 'inbox',
-    opts: { repo?: string; text?: string; session?: string; limit?: number } = {},
+    opts: { repo?: string; text?: string; session?: string; kind?: Kind; limit?: number } = {},
   ) {
     const where = [WHERE[filter]];
     const args: string[] = [];
+    if (opts.kind) {
+      where.push('kind = ?');
+      args.push(opts.kind);
+    }
     if (opts.repo) {
       where.push('repo = ?');
       args.push(opts.repo);
@@ -429,7 +433,13 @@ export class Store {
   counts() {
     const n = (w: string) =>
       Number((this.db.prepare(`SELECT COUNT(*) AS n FROM items WHERE ${w}`).get() as Row).n);
-    return { unread: n(WHERE.unread), owed: n(WHERE.owed), inbox: n(WHERE.inbox) };
+    return {
+      unread: n(WHERE.unread),
+      owed: n(WHERE.owed),
+      inbox: n(WHERE.inbox),
+      questions: n(`${WHERE.inbox} AND kind = 'question'`),
+      tasks: n(`${WHERE.inbox} AND kind = 'task'`),
+    };
   }
 
   /** Changes whenever anything a viewer could see changes, so a page can poll it cheaply. */

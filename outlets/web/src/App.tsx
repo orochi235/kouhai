@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, type Filter, type Item, type Listing, watch } from './api.ts';
+import { api, type Filter, type Item, type Kind, type Listing, watch } from './api.ts';
 import './App.css';
 import { MessageList } from './components/MessageList.tsx';
 import { Reader } from './components/Reader.tsx';
@@ -11,6 +11,7 @@ const initialRef = () => new URLSearchParams(location.search).get('q');
 
 export function App() {
   const [filter, setFilter] = useState<Filter>('inbox');
+  const [kind, setKind] = useState<Kind | null>('question');
   const [repo, setRepo] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [listing, setListing] = useState<Listing | null>(null);
@@ -22,14 +23,14 @@ export function App() {
 
   const load = useCallback(async () => {
     try {
-      const l = await api.list(filter, repo, text);
+      const l = await api.list(filter, kind, repo, text);
       version.current = l.version;
       setListing(l);
       setOffline(false);
     } catch {
       setOffline(true);
     }
-  }, [filter, repo, text]);
+  }, [filter, kind, repo, text]);
 
   useEffect(() => {
     load();
@@ -116,12 +117,14 @@ export function App() {
       <style>{repoSheet(listing?.repos ?? [])}</style>
       <Sidebar
         filter={filter}
+        kind={kind}
         repo={repo}
         counts={listing?.counts}
         repos={listing?.repos ?? []}
         offline={offline}
-        onFilter={(f) => {
+        onFilter={(f, k) => {
           setFilter(f);
+          setKind(k);
           setRepo(null);
         }}
         onRepo={(r) => setRepo(r === repo ? null : r)}

@@ -56,6 +56,15 @@ describe('Store', () => {
     expect(s.list('archived')).toHaveLength(1);
   });
 
+  it('splits the inbox by kind, in listing and in counts', () => {
+    const { s } = store();
+    s.take([q('why?'), t('do it'), t('and this')], null, ctx);
+    s.setArchived('t-3');
+    expect(s.list('inbox', { kind: 'task' }).map((i) => i.ref)).toEqual(['t-2']);
+    expect(s.list('inbox', { kind: 'question' }).map((i) => i.ref)).toEqual(['q-1']);
+    expect(s.counts()).toMatchObject({ inbox: 2, questions: 1, tasks: 1 });
+  });
+
   it('refuses an outcome that does not fit the kind', () => {
     const { s } = store();
     s.take([q('why?'), t('do it')], null, ctx);

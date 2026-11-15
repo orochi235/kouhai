@@ -1,28 +1,32 @@
-import type { Filter, Listing, Repo } from '../api.ts';
+import type { Filter, Kind, Listing, Repo } from '../api.ts';
 import { repoClass } from '../repoColors.ts';
 import './Sidebar.css';
 
-const FILTERS: { id: Filter; label: string; count?: keyof Listing['counts'] }[] = [
-  { id: 'inbox', label: 'Ledger', count: 'inbox' },
-  { id: 'unread', label: 'Unread', count: 'unread' },
-  { id: 'owed', label: 'Owed', count: 'owed' },
-  { id: 'pinned', label: 'Pinned' },
-  { id: 'archived', label: 'Archived' },
+/** The two inboxes split the ledger by kind; the views below them span both. */
+const BOXES: { filter: Filter; kind?: Kind; label: string; count?: keyof Listing['counts'] }[] = [
+  { filter: 'inbox', kind: 'question', label: 'Questions', count: 'questions' },
+  { filter: 'inbox', kind: 'task', label: 'Tasks', count: 'tasks' },
+  { filter: 'unread', label: 'Unread', count: 'unread' },
+  { filter: 'owed', label: 'Owed', count: 'owed' },
+  { filter: 'pinned', label: 'Pinned' },
+  { filter: 'archived', label: 'Archived' },
 ];
 
 type Props = {
   filter: Filter;
+  kind: Kind | null;
   repo: string | null;
   counts: Listing['counts'] | undefined;
   repos: Repo[];
   offline: boolean;
-  onFilter: (f: Filter) => void;
+  onFilter: (f: Filter, kind: Kind | null) => void;
   onRepo: (r: string) => void;
   onReadAll: () => void;
 };
 
 export function Sidebar({
   filter,
+  kind,
   repo,
   counts,
   repos,
@@ -40,16 +44,18 @@ export function Sidebar({
       </header>
 
       <ul className="filters">
-        {FILTERS.map((f) => (
-          <li key={f.id}>
+        {BOXES.map((b) => (
+          <li key={b.label}>
             <button
               type="button"
-              className={f.id === filter ? 'active' : ''}
-              onClick={() => onFilter(f.id)}
+              className={b.filter === filter && (b.kind ?? null) === kind ? 'active' : ''}
+              onClick={() => onFilter(b.filter, b.kind ?? null)}
             >
-              <span>{f.label}</span>
-              {f.count && counts && counts[f.count] > 0 && (
-                <span className={`count ${f.id === 'unread' ? 'hot' : ''}`}>{counts[f.count]}</span>
+              <span>{b.label}</span>
+              {b.count && counts && counts[b.count] > 0 && (
+                <span className={`count ${b.filter === 'unread' ? 'hot' : ''}`}>
+                  {counts[b.count]}
+                </span>
               )}
             </button>
           </li>

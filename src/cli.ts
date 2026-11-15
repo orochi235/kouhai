@@ -11,7 +11,7 @@ import {
 import { respond, serve } from './capture/mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
 import { idOf, Store } from './engine/store.ts';
-import { FILTERS, type Filter, type Item } from './engine/types.ts';
+import { FILTERS, type Filter, type Item, KINDS, type Kind } from './engine/types.ts';
 import { runDaemon } from './server/server.ts';
 
 const USAGE = `dixeram: a ledger of what Claude sessions owe you
@@ -91,10 +91,16 @@ async function main(argv: string[]) {
       return;
     }
     case 'ls': {
-      const f = (rest[0] ?? 'unread') as Filter;
+      const plural: Record<string, Kind> = { questions: 'question', tasks: 'task' };
+      const kinds = rest
+        .map((a) => plural[a] ?? a)
+        .filter((a): a is Kind => KINDS.includes(a as Kind));
+      const kind = kinds[0];
+      const f = (rest.find((a) => !(a in plural) && !KINDS.includes(a as Kind)) ??
+        'unread') as Filter;
       if (!FILTERS.includes(f)) throw new Error(`filter is one of ${FILTERS.join(', ')}`);
-      const qs = new Store().list(f);
-      console.log(qs.length ? qs.map(line).join('\n') : `nothing ${f}`);
+      const qs = new Store().list(f, { kind });
+      console.log(qs.length ? qs.map(line).join('\n') : `nothing ${f}${kind ? ` (${kind}s)` : ''}`);
       return;
     }
     case 'show': {
