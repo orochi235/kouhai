@@ -213,7 +213,7 @@ export function callTool(
       `Filed in the dixeram ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
         'Tell the user in one line what you filed' +
         (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
-        (lines.some((l) => l.question) ? '; end an answer in chat with its id' : '') +
+        (lines.some((l) => l.question) ? '; end an answer in chat with its id, appended to its last paragraph' : '') +
         '.',
     );
   }
@@ -234,7 +234,7 @@ export function callTool(
     return text(
       `${item.ref} settled as ${item.outcome} (${link(item.ref)})` +
         (item.attachments.length ? ` with ${item.attachments.length} enclosed` : '') +
-        (item.kind === 'question' ? '. End your answer in chat with its id.' : '.'),
+        (item.kind === 'question' ? '. End your answer in chat with its id, appended to its last paragraph rather than on a line of its own.' : '.'),
     );
   }
   if (name === 'clear') {

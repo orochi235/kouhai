@@ -16,8 +16,8 @@ export const RULE =
   "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
   'question about what to work on next; or one about how something works when answering leads into ' +
   'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
-  'in one line what you filed ("Filed q-17, t-18.") and end an answer in chat with its id ' +
-  '("(q-17 → inbox)"); if `take` fails or is not among your tools, say so instead. A dixeram call ' +
+  'in one line what you filed ("Filed q-17, t-18.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
+  'rather than on a line of its own ("…last sentence. (q-17 → inbox)"); if `take` fails or is not among your tools, say so instead. A dixeram call ' +
   'alone in a step costs an extra request, so pair them: file a question you answer without running ' +
   'anything already answered (`take` with `outcome` and `note`), call `take` beside your first other ' +
   "tool call, and `settle` beside your last when its note doesn't wait on that call.";
