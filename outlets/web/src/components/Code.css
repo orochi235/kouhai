@@ -1,0 +1,76 @@
+/* Code in notes, highlighted by highlight.js in the page's own inks, and Mermaid diagrams. */
+:root {
+  --code-keyword: var(--stamp);
+  --code-string: var(--done);
+  --code-number: #9a6a00;
+  --code-name: #3f6e8c;
+  --code-type: #7a4f96;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --code-number: var(--amber);
+    --code-name: #8fb8d6;
+    --code-type: #c49be0;
+  }
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-meta .hljs-keyword {
+  color: var(--code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-symbol,
+.hljs-addition {
+  color: var(--code-string);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable.language_ {
+  color: var(--code-number);
+}
+
+.hljs-title,
+.hljs-attr,
+.hljs-property,
+.hljs-attribute,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--code-name);
+}
+
+.hljs-type,
+.hljs-title.class_,
+.hljs-tag {
+  color: var(--code-type);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.hljs-deletion {
+  color: var(--stamp);
+}
+
+.answer .diagram {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.answer .diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.answer pre.diagram-error {
+  border-color: var(--stamp);
+}

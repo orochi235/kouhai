@@ -91,7 +91,7 @@ const TOOLS = [
     description:
       'Settle an item: a question as answered, a task as done, either as dropped (say why) or deferred ' +
       '(moved to a durable home such as a TODO entry or an issue; say where). Work waiting on a later ' +
-      'turn stays owed. The note is markdown read away from this chat, so it stands on its own: an ' +
+      'turn stays owed. The note is markdown read away from this chat (a code block naming its language is highlighted; ```mermaid draws a diagram), so it stands on its own: an ' +
       'answer leads with the answer; a task says what was done. Link files as markdown links to ' +
       'absolute paths, and commits, PRs, issues, docs, and artifacts by URL. A line saying work landed ' +
       'in a commit starts with ✅ and links it (`https://github.com/<owner>/<repo>/commit/<sha>`, from ' +

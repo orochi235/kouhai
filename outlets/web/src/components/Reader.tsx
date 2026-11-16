@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Attachment, Item, Outcome, Tag } from '../api.ts';
+import { drawDiagrams } from '../diagrams.ts';
 import { imageUrl, isImagePath } from '../images.ts';
 import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
 import { Follows } from './Follows.tsx';
 import { MisfileButton, MisfiledNote } from './Misfile.tsx';
+import './Code.css';
 import './Reader.css';
 import { TagBar } from './Tags.tsx';
 
@@ -80,6 +82,10 @@ export function Reader({
   askMisfile,
 }: Props) {
   const html = useMemo(() => (q?.note ? render(q.note, q.ref) : ''), [q?.note, q?.ref]);
+  const answer = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (html && answer.current) drawDiagrams(answer.current);
+  }, [html]);
   if (!q) {
     return (
       <article className="reader blank">
@@ -152,6 +158,7 @@ export function Reader({
 
         {q.note ? (
           <div
+            ref={answer}
             className="answer"
             onClick={(e) => {
               const a = (e.target as HTMLElement).closest('a');

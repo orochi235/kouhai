@@ -44,7 +44,7 @@ export function useInboxKeys({
   const item = 'Item';
   useCommand('item.archive', 'Archive or unarchive', () => current && archive(current), {
     group: item,
-    keys: key('e'),
+    keys: [key('x'), key('Backspace'), key('Delete')],
     enabled: needs(current),
   });
   useCommand('item.read', 'Mark read or unread', () => current && toggleRead(current), {

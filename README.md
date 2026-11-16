@@ -37,7 +37,7 @@ Each stage says what it did in the transcript: the hooks print a `dixeram ▸` l
 what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list
 its own open items after a long stretch of work or a compaction.
 
-On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `e` archive, `u` toggle unread, `p` pin,
+On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,
 `m` misfiled, `/` search; Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
 and whether opening an item marks it read). The columns are windease panes: drag a seam to resize.
 **Misfiled** marks an item that should never have been filed, with an optional reason, and
@@ -45,7 +45,8 @@ archives it; the five latest go into the MCP server's instructions as examples o
 file, so a new session learns from them (`dixeram misfile <id> [why]` does the same).
 **Tags** are your own labels: add one from an item's reader (a new name defines it), filter by it
 from the sidebar, and rename, recolor, or delete it there. Claude never sets them. Opening a settled
-item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
+item marks it read. `?q=q-17` opens one directly. Notes render as GitHub-flavored markdown: a code
+block that names its language is highlighted (highlight.js), and a ```` ```mermaid ```` block draws its diagram. A file a note links to opens when clicked; the
 daemon opens only absolute paths that note itself links. An attached image, and a local image the
 note shows with `![](/abs/path.png)`, appear inline. A claude.ai artifact stays a link, since
 claude.ai refuses to be framed (`frame-ancestors 'self'`).
