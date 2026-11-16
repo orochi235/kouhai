@@ -146,6 +146,16 @@ describe('Store', () => {
     s.setRead('q-1');
     expect(new Set([v0, v1, s.version()]).size).toBe(3);
   });
+
+  it('changes its version on two writes at the same clock time', () => {
+    const { s } = store();
+    s.take([q('x?')], null, ctx);
+    const v = s.version();
+    s.setPinned('q-1', true);
+    const v1 = s.version();
+    s.setPinned('q-1', false);
+    expect(new Set([v, v1, s.version()]).size).toBe(3);
+  });
 });
 
 describe('misfiles', () => {

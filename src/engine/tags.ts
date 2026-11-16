@@ -134,14 +134,6 @@ export class Tags {
     this.db.exec('DELETE FROM item_tags WHERE item NOT IN (SELECT id FROM items)');
   }
 
-  /** Changes whenever a tag is made, renamed, recolored, or deleted. */
-  version(): string {
-    const r = this.db
-      .prepare('SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS t FROM tags')
-      .get() as Row;
-    return `${r.n}:${r.t}`;
-  }
-
   private need(raw: unknown): Tag {
     const tag = this.get(tagName(raw));
     if (!tag) throw new Error(`no tag ${String(raw)}`);

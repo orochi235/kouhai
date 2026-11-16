@@ -63,6 +63,19 @@ ALTER TABLE items ADD COLUMN outcome TEXT;
 UPDATE items SET outcome = 'answered' WHERE note IS NOT NULL;
 DROP INDEX IF EXISTS questions_session;`;
 
+/** Bumped by trigger inside every write a viewer could see, whichever process makes it. */
+const REVISION = `
+CREATE TABLE IF NOT EXISTS revision (id INTEGER PRIMARY KEY CHECK (id = 1), n INTEGER NOT NULL);
+INSERT OR IGNORE INTO revision (id, n) VALUES (1, 0);
+${['items', 'tags', 'item_tags']
+  .flatMap((t) =>
+    ['INSERT', 'UPDATE', 'DELETE'].map(
+      (op) => `CREATE TRIGGER IF NOT EXISTS bump_${t}_${op.toLowerCase()} AFTER ${op} ON ${t}
+BEGIN UPDATE revision SET n = n + 1 WHERE id = 1; END;`,
+    ),
+  )
+  .join('\n')}`;
+
 type Row = Record<string, string | number | null>;
 
 const PROMPT_CAP = 4000;
@@ -131,6 +144,7 @@ export class Store {
     this.db.exec(TURNS);
     this.migrate();
     this.tags = new Tags(this.db, now);
+    this.db.exec(REVISION);
   }
 
   private has(table: string): boolean {
@@ -461,10 +475,7 @@ export class Store {
 
   /** Changes whenever anything a viewer could see changes, so a page can poll it cheaply. */
   version(): string {
-    const r = this.db
-      .prepare('SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS t FROM items')
-      .get() as Row;
-    return `${r.n}:${r.t}:${this.tags.version()}`;
+    return String((this.db.prepare('SELECT n FROM revision WHERE id = 1').get() as Row).n);
   }
 
   prune(): { items: number; turns: number } {
