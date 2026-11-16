@@ -94,7 +94,7 @@ export function Reader({
     );
   }
   return (
-    <article className="reader" key={q.ref}>
+    <article className={`reader ${q.repo ? repoClass(q.repo) : ''}`} key={q.ref}>
       <div className="toolbar">
         <span className="ref">{q.ref}</span>
         <span className="spacer" />
