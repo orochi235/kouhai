@@ -51,6 +51,24 @@ describe('mcp', () => {
     expect(s.get('q-1')?.attachments).toEqual([{ kind: 'artifact', ref: 'https://claude.ai/a' }]);
   });
 
+  it('files an item already settled, and leaves one with an unfit outcome owed', () => {
+    const s = new Store(':memory:');
+    const out = call(s, 'take', {
+      items: [
+        { kind: 'question', text: 'why?', outcome: 'answered', note: 'Because.' },
+        { kind: 'task', text: 'do it', outcome: 'answered', note: 'Did.' },
+        { kind: 'task', text: 'later' },
+      ],
+    }).result.content[0]?.text;
+    expect(s.get('q-1')).toMatchObject({ outcome: 'answered', note: 'Because.' });
+    expect(s.get('t-2')?.outcome).toBeNull();
+    expect(s.get('t-3')?.outcome).toBeNull();
+    expect(out).toMatch(/q-1: why\? \[settled as answered/);
+    expect(out).toMatch(/t-2: do it \[not settled/);
+    expect(out).toMatch(/settle` each still owed/);
+    expect(out).toMatch(/end an answer in chat with its id/);
+  });
+
   it('reports a bad id or a mismatched outcome as a tool error', () => {
     const s = new Store(':memory:');
     expect(call(s, 'settle', { id: 'q-9', outcome: 'answered', note: 'x' }).result.isError).toBe(

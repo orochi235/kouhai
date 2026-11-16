@@ -21,7 +21,11 @@ export const RULE =
   'turn is owed, not deferred: leave it open. Only once `take` has returned ids, say in one line what ' +
   'you filed ("Filed q-17, t-18."), and end an answer in chat with its id ("(q-17 → inbox)"); never ' +
   'announce a filing before it is accepted, and if `take` fails, say it failed rather than naming an ' +
-  'id. If the `take` tool is not among your tools, say so to the user rather than skipping the filing. Notes are read later, away from this ' +
+  'id. If the `take` tool is not among your tools, say so to the user rather than skipping the filing. ' +
+  'A dixeram call alone in a step costs a whole extra request, so pair them: a question you answer ' +
+  'without running anything first is filed already answered (give `take` its `outcome` and `note`); ' +
+  'otherwise call `take` in the same step as your first other tool call, and `settle` beside your last ' +
+  "one whenever its note does not wait on that call's result. Notes are read later, away from this " +
   'conversation, so make them stand on their own and link generously: every file you name as a ' +
   'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
   'issues, docs, and artifacts by URL.';

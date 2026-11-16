@@ -39,6 +39,19 @@ export function instructions(store: Store): string {
 
 const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
 
+const ATTACHMENTS = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: {
+      kind: { type: 'string', enum: ATTACHMENT_KINDS },
+      ref: { type: 'string', description: 'URL or absolute path.' },
+      label: { type: 'string' },
+    },
+    required: ['kind', 'ref'],
+  },
+};
+
 const TOOLS = [
   {
     name: 'take',
@@ -46,7 +59,9 @@ const TOOLS = [
       'File items you now owe the user. A "question" is anything they asked you directly. A "task" is ' +
       'an instruction you will not finish before this turn ends; one you carry out now needs no filing. ' +
       'Quote or tightly paraphrase their words. Pass the `turn` id from the dixeram hook when one was ' +
-      'given. Returns ids like q-17 and t-18.',
+      'given. An item you can settle already (a question you answer without running anything first) ' +
+      'takes its `outcome` and `note` here, written as `settle` describes, which saves a separate ' +
+      '`settle` call. Returns ids like q-17 and t-18.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -63,6 +78,13 @@ const TOOLS = [
                 description:
                   'For a follow-up question: the id of the settled item whose answer it responds to, e.g. q-17.',
               },
+              outcome: {
+                type: 'string',
+                enum: ALL_OUTCOMES,
+                description: 'To file it already settled; give `note` too.',
+              },
+              note: { type: 'string', description: 'The settling note, as for `settle`.' },
+              attachments: ATTACHMENTS,
             },
             required: ['kind', 'text'],
           },
@@ -86,18 +108,7 @@ const TOOLS = [
         id: { type: 'string', description: 'The item id, e.g. q-17 or t-18.' },
         outcome: { type: 'string', enum: ALL_OUTCOMES },
         note: { type: 'string' },
-        attachments: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string', enum: ATTACHMENT_KINDS },
-              ref: { type: 'string', description: 'URL or absolute path.' },
-              label: { type: 'string' },
-            },
-            required: ['kind', 'ref'],
-          },
-        },
+        attachments: ATTACHMENTS,
       },
       required: ['id', 'outcome', 'note'],
     },
@@ -150,14 +161,26 @@ function attachmentsOf(v: unknown): Attachment[] {
   });
 }
 
-function itemsOf(v: unknown): { kind: Kind; text: string; parent: string | null }[] {
+type Taken = { kind: Kind; text: string; parent: string | null; settled: Settled | null };
+type Settled = { outcome: Outcome; note: string; attachments: Attachment[] };
+
+function itemsOf(v: unknown): Taken[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((i) => {
     if (!i || typeof i !== 'object') return [];
-    const { kind, text: t, parent } = i as Record<string, unknown>;
+    const { kind, text: t, parent, outcome, note, attachments } = i as Record<string, unknown>;
     if (!KINDS.includes(kind as Kind) || typeof t !== 'string' || !t.trim()) return [];
+    const settled =
+      ALL_OUTCOMES.includes(outcome as Outcome) && typeof note === 'string' && note.trim()
+        ? { outcome: outcome as Outcome, note, attachments: attachmentsOf(attachments) }
+        : null;
     return [
-      { kind: kind as Kind, text: t, parent: typeof parent === 'string' && parent ? parent : null },
+      {
+        kind: kind as Kind,
+        text: t,
+        parent: typeof parent === 'string' && parent ? parent : null,
+        settled,
+      },
     ];
   });
 }
@@ -174,9 +197,32 @@ export function callTool(
     if (!items.length) return text('`items` needs at least one {kind, text}.', true);
     const turn = typeof args.turn === 'string' ? args.turn : null;
     const filed = store.take(items, turn, fallback);
+    // Filed first, so an outcome that doesn't fit its kind still leaves the item owed, not lost.
+    const lines = filed.map((i, n) => {
+      const head = `${i.ref}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`;
+      const s = items[n]?.settled;
+      if (!s) return { head, owed: true, question: false };
+      try {
+        store.settle(i.id, s.outcome, s.note, s.attachments);
+        return {
+          head: `${head} [settled as ${s.outcome}: ${link(i.ref)}]`,
+          owed: false,
+          question: i.kind === 'question',
+        };
+      } catch (err) {
+        return {
+          head: `${head} [not settled: ${(err as Error).message}]`,
+          owed: true,
+          question: false,
+        };
+      }
+    });
     return text(
-      `Filed in the dixeram ledger:\n${filed.map((i) => `${i.ref}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`).join('\n')}\n` +
-        'Tell the user in one line what you filed, then `settle` each when it is.',
+      `Filed in the dixeram ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
+        'Tell the user in one line what you filed' +
+        (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
+        (lines.some((l) => l.question) ? '; end an answer in chat with its id' : '') +
+        '.',
     );
   }
   if (name === 'settle') {
