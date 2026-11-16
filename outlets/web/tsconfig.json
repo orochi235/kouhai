@@ -16,6 +16,7 @@
       "@weasel-js/ui/components/*": ["../../../weasel/packages/ui/dist/components/*/index.d.ts"],
       "@weasel-js/prefs/react": ["../../../weasel/packages/prefs/dist/react.d.ts"],
       "@weasel-js/icons/react": ["../../../weasel/packages/icons/dist/react.d.ts"],
+      "@weasel-js/theme/react": ["../../../weasel/packages/theme/dist/react.d.ts"],
       "@weasel-js/*": ["../../../weasel/packages/*/dist/index.d.ts"]
     }
   },

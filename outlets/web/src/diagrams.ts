@@ -1,4 +1,5 @@
 import type { Mermaid } from 'mermaid';
+import { currentScheme } from './scheme.ts';
 
 // Mermaid is large, so it loads only for a note that has a diagram.
 let mermaid: Promise<Mermaid> | null = null;
@@ -10,7 +11,7 @@ export async function drawDiagrams(root: HTMLElement) {
   if (!blocks.length) return;
   mermaid ??= import('mermaid').then((m) => m.default);
   const m = await mermaid;
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = currentScheme() === 'dark';
   m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'neutral' });
   for (const code of blocks) {
     const pre = code.parentElement;

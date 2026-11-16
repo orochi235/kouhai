@@ -1,3 +1,17 @@
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 12px;
+  background: var(--paper-rail);
+  border-bottom: 1px solid var(--rule);
+}
+
 .app {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }

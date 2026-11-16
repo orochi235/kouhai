@@ -2,6 +2,7 @@ import icons from 'virtual:weasel-icons';
 import { EditorShell, useOpenPreferences } from '@weasel-js/editor';
 import { IconRegistryProvider } from '@weasel-js/icons/react';
 import { usePref } from '@weasel-js/prefs/react';
+import { ColorModeControl } from '@weasel-js/ui/components/ColorModeControl';
 import { ShortcutSheet, useShortcutSheetCommand } from '@weasel-js/ui/components/ShortcutSheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -24,6 +25,7 @@ import { tagSheet } from './components/Tags.tsx';
 import { useInboxKeys } from './keys.ts';
 import { prefs } from './prefs.ts';
 import { repoSheet } from './repoColors.ts';
+import { useSchemeChoice } from './scheme.ts';
 import { useListSelection } from './selection.ts';
 import { thread } from './thread.ts';
 import { useUndo } from './undo.ts';
@@ -31,9 +33,16 @@ import { useUndo } from './undo.ts';
 const initialRef = () => new URLSearchParams(location.search).get('q');
 
 export function App() {
+  const scheme = useSchemeChoice();
+  // A debugging aid: flips the page between schemes without changing the system's.
+  const topbar = (
+    <header className="topbar">
+      <ColorModeControl size="sm" value={scheme.preference} onChange={scheme.setPreference} />
+    </header>
+  );
   return (
     <IconRegistryProvider icons={icons}>
-      <EditorShell prefs={prefs} shortcuts={null} contextMenus={false}>
+      <EditorShell prefs={prefs} shortcuts={null} contextMenus={false} topbar={topbar}>
         <Inbox />
       </EditorShell>
     </IconRegistryProvider>

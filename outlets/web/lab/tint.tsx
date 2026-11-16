@@ -1,4 +1,5 @@
 import { type ConfigOf, defineInstrument, f } from '@weasel-js/labkit';
+import { useThemeOptional } from '@weasel-js/theme/react';
 import type { Item } from '../src/api.ts';
 import { Reader } from '../src/components/Reader.tsx';
 import { inkFor, repoClass } from '../src/repoColors.ts';
@@ -14,7 +15,6 @@ const SAMPLES = [
 ] as const;
 
 const config = f.schema({
-  theme: f.enum('light', ['light', 'dark']).label('Theme'),
   source: f.enum('background', ['background', 'foreground', 'accent']).label('Project color'),
   surface: f.enum('pane', ['pane', 'toolbar', 'sheet', 'edge']).label('Surface'),
   blend: f.enum('wash', ['wash', 'mix', 'fade']).label('Blend'),
@@ -52,12 +52,11 @@ const item = (repo: string): Item => ({
 });
 
 /** The candidate tint as a stylesheet, scoped to the lab's cells; the winner moves into Reader.css. */
-function sheet(c: Config): string {
+function sheet(c: Config, dark: boolean): string {
   const colors = SAMPLES.map((s) => {
     const raw = s[c.source] || s.background;
     return `.tint-lab .${repoClass(s.repo)}{--chip-bg:${s.background};--chip-fg:${s.foreground || inkFor(s.background)};--tint-raw:${raw}}`;
   });
-  const dark = c.theme === 'dark';
   const pct = dark ? c.darkStrength : c.strength;
   const color =
     dark && c.darkLift
@@ -84,13 +83,12 @@ function sheet(c: Config): string {
 
 const noop = () => {};
 
-export const Tint = defineInstrument<Record<string, never>, Config>({
-  name: 'Reader tint',
-  config,
-  initialState: () => ({}),
-  render: (ctx) => (
-    <div className="tint-lab" data-scheme={ctx.config.theme}>
-      <style>{sheet(ctx.config)}</style>
+/** The six readers, in the scheme labkit's View → Theme puts the lab in. */
+function Cells({ config }: { config: Config }) {
+  const scheme = useThemeOptional()?.selection.mode === 'light' ? 'light' : 'dark';
+  return (
+    <div className="tint-lab" data-scheme={scheme}>
+      <style>{sheet(config, scheme === 'dark')}</style>
       {SAMPLES.map((s) => (
         <figure key={s.repo} className="cell">
           <div className="frame">
@@ -110,11 +108,17 @@ export const Tint = defineInstrument<Record<string, never>, Config>({
             />
           </div>
           <figcaption>
-            {s.repo}{' '}
-            <code>{s[ctx.config.source] || `${s.background} (no ${ctx.config.source})`}</code>
+            {s.repo} <code>{s[config.source] || `${s.background} (no ${config.source})`}</code>
           </figcaption>
         </figure>
       ))}
     </div>
-  ),
+  );
+}
+
+export const Tint = defineInstrument<Record<string, never>, Config>({
+  name: 'Reader tint',
+  config,
+  initialState: () => ({}),
+  render: (ctx) => <Cells config={ctx.config} />,
 });
