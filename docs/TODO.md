@@ -19,3 +19,8 @@
   the strength, the source color, the surface, the blend, and how dark mode lifts the color, across six
   real projects. Once one is chosen, move it into `Reader.css` and remove `lab/`, `lab.html`, the `lab`
   build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency. Lab built 2026-11-16.
+
+- **Rename away from a name that reads as "dicks".** Favorite so far: *kouhai* (the junior who keeps
+  track for the senior); runners-up *slate* and *chit*. Left for later (2026-11-16). The rename
+  touches the plugin and marketplace names, the `dev.dixeram` launchd label, `DIXERAM_HOME` and
+  `DIXERAM_PORT`, the `~/.local/bin` link, and every MCP tool prefix.
