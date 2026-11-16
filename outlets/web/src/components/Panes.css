@@ -1,0 +1,16 @@
+.panes {
+  position: relative;
+  height: 100%;
+}
+
+.pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pane > * {
+  flex: 1;
+  min-height: 0;
+}

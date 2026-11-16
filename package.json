@@ -11,8 +11,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "vite outlets/web",
-    "build": "vite build outlets/web",
+    "dev": "WEASEL=${WEASEL:-../weasel} vite outlets/web",
+    "build": "WEASEL=${WEASEL:-../weasel} vite build outlets/web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p outlets/web",
     "lint": "biome check .",
@@ -25,16 +25,29 @@
     "@fontsource-variable/newsreader": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/instrument-serif": "^5.3.0",
+    "@msb235/blits": "^1.4.0",
     "@types/node": "^25.9.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "@weasel-js/animator": "^1.19.1",
+    "@weasel-js/core": "^1.19.1",
+    "@weasel-js/editor": "^1.19.1",
+    "@weasel-js/font": "^1.19.1",
+    "@weasel-js/geom": "^1.19.1",
+    "@weasel-js/guides": "^1.19.1",
+    "@weasel-js/icons-plugin": "^1.19.1",
+    "@weasel-js/prefs": "^1.19.1",
+    "@weasel-js/storage": "^1.19.1",
+    "@weasel-js/theme": "^1.19.1",
+    "@weasel-js/ui": "^1.19.1",
     "dompurify": "^3.4.17",
     "marked": "^18.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "windease": "^2.3.0"
   }
 }

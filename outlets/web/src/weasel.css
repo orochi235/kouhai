@@ -1,0 +1,18 @@
+/* weasel's dialogs (the shortcut sheet, preferences) in the page's own paper and ink. Its
+   tokens.css supplies every other token; these follow the page's light and dark palettes. */
+:root {
+  --wzl-surface: var(--paper-sheet);
+  --wzl-surface-raised: var(--paper-sheet);
+  --wzl-surface-popover: var(--paper-sheet);
+  --wzl-surface-sunken: var(--paper-rail);
+  --wzl-panel-surface: var(--paper-sheet);
+  --wzl-fg: var(--ink);
+  --wzl-fg-muted: var(--ink-soft);
+  --wzl-fg-subtle: var(--ink-faint);
+  --wzl-border: var(--rule);
+  --wzl-line-subtle: var(--rule);
+  --wzl-accent: var(--stamp);
+  --wzl-focus-ring: var(--amber);
+  --wzl-font-ui: var(--serif);
+  --wzl-font-body: var(--serif);
+}

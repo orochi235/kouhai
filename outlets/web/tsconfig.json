@@ -11,7 +11,12 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "types": ["vite/client"],
-    "paths": { "@core/*": ["../../src/engine/*"] }
+    "paths": {
+      "@core/*": ["../../src/engine/*"],
+      "@weasel-js/ui/components/*": ["../../../weasel/packages/ui/dist/components/*/index.d.ts"],
+      "@weasel-js/prefs/react": ["../../../weasel/packages/prefs/dist/react.d.ts"],
+      "@weasel-js/*": ["../../../weasel/packages/*/dist/index.d.ts"]
+    }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "weasel.ts"]
 }

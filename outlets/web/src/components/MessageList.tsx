@@ -53,6 +53,9 @@ export function MessageList({
           placeholder="Search the ledger"
           value={text}
           onChange={(e) => onText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') e.currentTarget.blur();
+          }}
         />
       </div>
       {rows.length === 0 ? (

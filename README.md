@@ -37,7 +37,9 @@ Each stage says what it did in the transcript: the hooks print a `dixeram ▸` l
 what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list
 its own open items after a long stretch of work or a compaction.
 
-On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `m` misfiled, `/` search.
+On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `e` archive, `u` toggle unread, `p` pin,
+`m` misfiled, `/` search; Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
+and whether opening an item marks it read). The columns are windease panes: drag a seam to resize.
 **Misfiled** marks an item that should never have been filed, with an optional reason, and
 archives it; the ten latest go into the MCP server's instructions as examples of what not to
 file, so a new session learns from them (`dixeram misfile <id> [why]` does the same).

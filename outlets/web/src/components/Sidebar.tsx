@@ -27,6 +27,8 @@ type Props = {
   onFilter: (f: Filter, kind: Kind | null) => void;
   onRepo: (r: string) => void;
   onReadAll: () => void;
+  onShortcuts: () => void;
+  onPreferences: () => void;
 };
 
 export function Sidebar({
@@ -43,6 +45,8 @@ export function Sidebar({
   onFilter,
   onRepo,
   onReadAll,
+  onShortcuts,
+  onPreferences,
 }: Props) {
   return (
     <nav className="sidebar">
@@ -102,9 +106,12 @@ export function Sidebar({
           </button>
         )}
         <p className="keys">
-          <kbd>j</kbd>
-          <kbd>k</kbd> move · <kbd>e</kbd> archive · <kbd>u</kbd> unread · <kbd>p</kbd> pin ·{' '}
-          <kbd>m</kbd> misfiled · <kbd>/</kbd> search
+          <button type="button" className="quiet" onClick={onShortcuts}>
+            Shortcuts <kbd>?</kbd>
+          </button>
+          <button type="button" className="quiet" onClick={onPreferences}>
+            Preferences
+          </button>
         </p>
         {offline && <p className="offline">The daemon is not answering on :8771</p>}
       </footer>
