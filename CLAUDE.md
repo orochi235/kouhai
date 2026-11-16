@@ -17,6 +17,8 @@
   (2026-11-15). The pins stay on the published version. The page also imports `IconRegistryProvider` from
   `@weasel-js/icons/react`, where weasel moved it after 1.19.1 (2026-11-16). Once a release carries both, drop the
   plugin, the tsconfig paths, and the `WEASEL=` in the `dev` and `build` scripts.
+  A page build that fails on a missing `@weasel-js` export means the checkout's `dist/` lags its source:
+  run `npm run build` in `../weasel` (the whole workspace, in order), not one package at a time.
 - Claude Code runs a cached copy of `plugin/` (the hooks and the manifest), keyed on its version.
   A change there lands only after bumping the version in `plugin/.claude-plugin/plugin.json` and
   `.claude-plugin/marketplace.json`, then `claude plugin update dixeram@dixeram` in each config
