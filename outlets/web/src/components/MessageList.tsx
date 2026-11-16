@@ -1,5 +1,7 @@
+import { Icon } from '@weasel-js/ui/components/Icon';
 import type { RefObject } from 'react';
 import type { Filter, Item, Kind, Tag } from '../api.ts';
+import { icon } from '../icons.gen.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import type { Row } from '../thread.ts';
@@ -94,10 +96,12 @@ export function MessageList({
                   </span>
                   <span className="q" dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }} />
                   {q.note ? (
-                    <span
-                      className="a"
-                      dangerouslySetInnerHTML={{ __html: renderPreview(q.note) }}
-                    />
+                    <span className="a">
+                      {q.kind === 'task' && q.outcome === 'done' && (
+                        <Icon name={icon('ui:check')} size={14} className="done" label="Done" />
+                      )}
+                      <span dangerouslySetInnerHTML={{ __html: renderPreview(q.note) }} />
+                    </span>
                   ) : (
                     <span className="a">
                       {q.kind === 'task' ? 'Still owed.' : 'Claude has not answered yet…'}

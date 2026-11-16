@@ -157,6 +157,12 @@
 }
 
 .q code,
+.a .done {
+  color: var(--done);
+  vertical-align: -2px;
+  margin-inline-end: 4px;
+}
+
 .a code {
   font-family: var(--mono);
   font-size: 0.85em;
