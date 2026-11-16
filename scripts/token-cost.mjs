@@ -19,6 +19,8 @@ function measure(path) {
   let dixReads = 0;
   const dixTools = new Set();
   const seen = new Set();
+  const tools = new Map(); // API call id → names of the tools it called
+  const order = []; // API call ids in order, with their context size
   for (const line of readFileSync(path, 'utf8').split('\n')) {
     if (!line) continue;
     const d = JSON.parse(line);
@@ -33,6 +35,10 @@ function measure(path) {
     const content = Array.isArray(d.message?.content) ? d.message.content : [];
     for (const b of content) {
       let n = 0;
+      if (b.type === 'tool_use' && d.message?.id) {
+        if (!tools.has(d.message.id)) tools.set(d.message.id, []);
+        tools.get(d.message.id).push(b.name);
+      }
       if (b.type === 'tool_use' && b.name?.includes('dixeram')) {
         dixTools.add(b.id);
         n = JSON.stringify(b.input).length + b.name.length;
@@ -46,24 +52,36 @@ function measure(path) {
     if (u && !seen.has(d.message.id)) {
       seen.add(d.message.id);
       calls++;
-      reads +=
+      const ctx =
         (u.input_tokens ?? 0) +
         (u.cache_read_input_tokens ?? 0) +
         (u.cache_creation_input_tokens ?? 0);
+      reads += ctx;
+      order.push([d.message.id, ctx]);
       dixReads += live + tok(fixedChars);
     }
   }
-  return { calls, reads, dixReads, added };
+  // A call that used only dixeram's tools forced one more call, re-reading the whole context.
+  let trips = 0;
+  let tripReads = 0;
+  for (let i = 0; i + 1 < order.length; i++) {
+    const names = tools.get(order[i][0]) ?? [];
+    if (names.length && names.every((n) => n.includes('dixeram'))) {
+      trips++;
+      tripReads += order[i + 1][1];
+    }
+  }
+  return { calls, reads, dixReads, added, trips, tripReads };
 }
 
 const pad = (s, n) => String(s).padStart(n);
 console.log(
-  `${'calls'.padStart(6)} ${'context read'.padStart(13)} ${'dixeram read'.padStart(13)} ${'share'.padStart(6)} ${'added'.padStart(7)}  transcript`,
+  `${'calls'.padStart(6)} ${'context read'.padStart(13)} ${'dixeram read'.padStart(13)} ${'share'.padStart(6)} ${'added'.padStart(7)} ${'trips'.padStart(5)} ${'trip read'.padStart(11)} ${'trip share'.padStart(10)}  transcript`,
 );
 for (const p of args) {
   const m = measure(p);
   const share = m.reads ? (100 * m.dixReads) / m.reads : 0;
   console.log(
-    `${pad(m.calls, 6)} ${pad(Math.round(m.reads), 13)} ${pad(Math.round(m.dixReads), 13)} ${pad(share.toFixed(1), 5)}% ${pad(Math.round(m.added), 7)}  ${p.split('/').slice(-2).join('/')}`,
+    `${pad(m.calls, 6)} ${pad(Math.round(m.reads), 13)} ${pad(Math.round(m.dixReads), 13)} ${pad(share.toFixed(1), 5)}% ${pad(Math.round(m.added), 7)} ${pad(m.trips, 5)} ${pad(m.tripReads, 11)} ${pad(((100 * m.tripReads) / (m.reads || 1)).toFixed(1), 9)}%  ${p.split('/').slice(-2).join('/')}`,
   );
 }
