@@ -73,6 +73,11 @@
   background: var(--select);
 }
 
+.item.picked {
+  background: var(--paper-sheet);
+  box-shadow: inset 3px 0 0 var(--rule);
+}
+
 .item.selected {
   background: var(--paper-sheet);
   box-shadow: inset 3px 0 0 var(--stamp);

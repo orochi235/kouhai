@@ -2,11 +2,15 @@ import { type KeySpec, useCommand } from '@weasel-js/core';
 import type { Item, Kind } from './api.ts';
 
 const key = (k: string | readonly string[]): KeySpec => ({ kind: 'key', key: k as string });
+const shift = (k: string): KeySpec => ({ kind: 'key', key: k, mods: { shift: true } });
 const needs = (q: Item | null) => () => (q ? true : 'Select an item first');
 
 type Inbox = {
   current: Item | null;
-  move: (step: number) => void;
+  /** Steps the cursor; `extend` grows the selection from its anchor instead of replacing it. */
+  move: (step: number, extend?: boolean) => void;
+  selectAll: () => void;
+  collapse: () => void;
   search: () => void;
   archive: (q: Item) => void;
   toggleRead: (q: Item) => void;
@@ -19,6 +23,8 @@ type Inbox = {
 export function useInboxKeys({
   current,
   move,
+  selectAll,
+  collapse,
   search,
   archive,
   toggleRead,
@@ -35,6 +41,19 @@ export function useInboxKeys({
     group,
     keys: [key('k'), key('ArrowUp')],
   });
+  useCommand('inbox.extendNext', 'Extend selection down', () => move(1, true), {
+    group,
+    keys: [shift('j'), shift('ArrowDown')],
+  });
+  useCommand('inbox.extendPrevious', 'Extend selection up', () => move(-1, true), {
+    group,
+    keys: [shift('k'), shift('ArrowUp')],
+  });
+  useCommand('edit.selectAll', 'Select all', selectAll, {
+    group,
+    keys: { kind: 'key', key: 'a', mods: { mod: true } },
+  });
+  useCommand('inbox.collapse', 'Clear selection', collapse, { group, keys: key('Escape') });
   useCommand('inbox.search', 'Search', search, { group, keys: key('/') });
   useCommand('inbox.questions', 'Questions inbox', () => box('question'), {
     group,

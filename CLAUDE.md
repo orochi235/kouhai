@@ -14,7 +14,8 @@
   `launchctl kickstart -k gui/$(id -u)/dev.dixeram`. The page needs `npm run build`.
 - **The page builds against the weasel checkout at `../weasel`** (`WEASEL=<checkout>`, `outlets/web/weasel.ts`,
   and `@weasel-js/*` in `outlets/web/tsconfig.json`), because its shortcut sheet is in no weasel release yet
-  (2026-11-15). The pins stay on the published version. Once a release carries `ShortcutSheet`, drop the
+  (2026-11-15). The pins stay on the published version. The page also imports `IconRegistryProvider` from
+  `@weasel-js/icons/react`, where weasel moved it after 1.19.1 (2026-11-16). Once a release carries both, drop the
   plugin, the tsconfig paths, and the `WEASEL=` in the `dev` and `build` scripts.
 - Claude Code runs a cached copy of `plugin/` (the hooks and the manifest), keyed on its version.
   A change there lands only after bumping the version in `plugin/.claude-plugin/plugin.json` and

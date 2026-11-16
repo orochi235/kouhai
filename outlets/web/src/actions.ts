@@ -2,23 +2,41 @@ import { useCallback, useMemo } from 'react';
 import { api, type Item, type Tag, type TagEdit } from './api.ts';
 import type { Step } from './undo.ts';
 
-type Toggle = 'read' | 'archive' | 'pin';
-const TOGGLES: Record<Toggle, { key: string; label: [string, string] }> = {
-  read: { key: 'read', label: ['Mark read', 'Mark unread'] },
-  archive: { key: 'archived', label: ['Archive', 'Unarchive'] },
-  pin: { key: 'pinned', label: ['Pin', 'Unpin'] },
-};
+export type Toggle = 'read' | 'archive' | 'pin';
+const TOGGLES: Record<Toggle, { key: string; label: [string, string]; on: (q: Item) => boolean }> =
+  {
+    read: { key: 'read', label: ['Mark read', 'Mark unread'], on: (q) => !!q.readAt },
+    archive: { key: 'archived', label: ['Archive', 'Unarchive'], on: (q) => !!q.archivedAt },
+    pin: { key: 'pinned', label: ['Pin', 'Unpin'], on: (q) => q.pinned },
+  };
+
+/** What flipping `path` on `lead` would do, as its button says it. */
+export const flipLabel = (path: Toggle, lead: Item) =>
+  TOGGLES[path].label[TOGGLES[path].on(lead) ? 1 : 0];
 
 /** Everything the page changes, each as an undo step that knows how to take itself back. */
 export function useActions(record: (step: Step) => void, load: () => void, tags: Tag[] = []) {
+  /** Sets `path` to `on` on every item in `qs`; undo puts each back as it was. */
   const act = useCallback(
-    (path: Toggle, q: Item, on: boolean, undoable = true) => {
-      const { key, label } = TOGGLES[path];
-      const send = (v: boolean) => () => api.post(path, { id: q.ref, [key]: v });
-      if (!undoable) send(on)().then(load, load);
-      else record({ label: `${label[on ? 0 : 1]} ${q.ref}`, run: send(on), back: send(!on) });
+    (path: Toggle, qs: readonly Item[], on: boolean, undoable = true) => {
+      const { key, label, on: was } = TOGGLES[path];
+      const send = (q: Item, v: boolean) => api.post(path, { id: q.ref, [key]: v });
+      const run = () => Promise.all(qs.map((q) => send(q, on)));
+      if (!undoable) return void run().then(load, load);
+      const what = qs.length === 1 ? qs[0]?.ref : `${qs.length} items`;
+      record({
+        label: `${label[on ? 0 : 1]} ${what}`,
+        run,
+        back: () => Promise.all(qs.map((q) => send(q, was(q)))),
+      });
     },
     [load, record],
+  );
+
+  /** Flips `path` on `qs` the way it would flip on `lead`, the item the reader shows. */
+  const flip = useCallback(
+    (path: Toggle, qs: readonly Item[], lead: Item) => act(path, qs, !TOGGLES[path].on(lead)),
+    [act],
   );
 
   const tag = useCallback(
@@ -91,7 +109,7 @@ export function useActions(record: (step: Step) => void, load: () => void, tags:
   }, [record]);
 
   return useMemo(
-    () => ({ act, tag, editTag, misfile, readAll }),
-    [act, tag, editTag, misfile, readAll],
+    () => ({ act, flip, tag, editTag, misfile, readAll }),
+    [act, flip, tag, editTag, misfile, readAll],
   );
 }

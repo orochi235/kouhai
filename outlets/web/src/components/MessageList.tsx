@@ -4,6 +4,7 @@ import type { Filter, Item, Kind, Tag } from '../api.ts';
 import { icon } from '../icons.gen.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
+import type { Press } from '../selection.ts';
 import type { Row } from '../thread.ts';
 import { age } from '../time.ts';
 import './MessageList.css';
@@ -26,18 +27,21 @@ const EMPTY_BOX: Record<Kind, string> = {
 type Props = {
   rows: Row[];
   selected: string | null;
+  /** Every selected row; more than one while a selection spans several. */
+  picked: readonly string[];
   filter: Filter;
   kind: Kind | null;
   tags: Tag[];
   text: string;
   searchRef: RefObject<HTMLInputElement | null>;
   onText: (t: string) => void;
-  onSelect: (ref: string) => void;
+  onSelect: (ref: string, e: Press) => void;
 };
 
 export function MessageList({
   rows,
   selected,
+  picked,
   filter,
   kind,
   tags,
@@ -72,12 +76,12 @@ export function MessageList({
                   role="button"
                   tabIndex={0}
                   aria-current={q.ref === selected}
-                  className={`item ${state} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''}`}
-                  onClick={() => onSelect(q.ref)}
+                  className={`item ${state} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''} ${picked.length > 1 && picked.includes(q.ref) ? 'picked' : ''}`}
+                  onClick={(e) => onSelect(q.ref, e)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      onSelect(q.ref);
+                      onSelect(q.ref, e);
                     }
                   }}
                 >

@@ -1,6 +1,6 @@
 import icons from 'virtual:weasel-icons';
-import { IconRegistryProvider } from '@weasel-js/core';
 import { EditorShell, useOpenPreferences } from '@weasel-js/editor';
+import { IconRegistryProvider } from '@weasel-js/icons/react';
 import { usePref } from '@weasel-js/prefs/react';
 import { ShortcutSheet, useShortcutSheetCommand } from '@weasel-js/ui/components/ShortcutSheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -15,6 +15,7 @@ import {
 } from './api.ts';
 import './App.css';
 import { useActions } from './actions.ts';
+import { Bulk } from './components/Bulk.tsx';
 import { MessageList } from './components/MessageList.tsx';
 import { Panes } from './components/Panes.tsx';
 import { Reader } from './components/Reader.tsx';
@@ -23,6 +24,7 @@ import { tagSheet } from './components/Tags.tsx';
 import { useInboxKeys } from './keys.ts';
 import { prefs } from './prefs.ts';
 import { repoSheet } from './repoColors.ts';
+import { useListSelection } from './selection.ts';
 import { thread } from './thread.ts';
 import { useUndo } from './undo.ts';
 
@@ -52,7 +54,6 @@ function Inbox() {
   const [tag, setTag] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [listing, setListing] = useState<Listing | null>(null);
-  const [selected, setSelected] = useState<string | null>(initialRef);
   const [offline, setOffline] = useState(false);
   const [askMisfile, setAskMisfile] = useState(0);
   const version = useRef('');
@@ -86,7 +87,22 @@ function Inbox() {
 
   const rows = useMemo(() => thread(listing?.items ?? []), [listing]);
   const items = useMemo(() => rows.map((r) => r.item), [rows]);
+  const order = useMemo(() => items.map((q) => q.ref), [items]);
+  const {
+    current: selected,
+    picked,
+    press,
+    go,
+    all,
+    collapse,
+  } = useListSelection(order, initialRef());
   const current = useMemo(() => items.find((q) => q.ref === selected) ?? null, [items, selected]);
+  // What an action applies to: every picked item, or the one the reader shows.
+  const targets = useMemo(
+    () =>
+      picked.length > 1 ? items.filter((q) => picked.includes(q.ref)) : current ? [current] : [],
+    [items, picked, current],
+  );
 
   useEffect(() => {
     const url = new URL(location.href);
@@ -98,6 +114,7 @@ function Inbox() {
   const undo = useUndo(load);
   const {
     act,
+    flip,
     tag: tagItem,
     editTag,
     misfile,
@@ -111,18 +128,26 @@ function Inbox() {
     const key = `${current.ref}:${current.settledAt}`;
     if (key === autoRead.current) return;
     autoRead.current = key;
-    if (!current.readAt) act('read', current, true, false);
+    if (!current.readAt) act('read', [current], true, false);
   }, [current, act, readOnOpen]);
 
   const move = useCallback(
-    (step: number) => {
-      if (!items.length) return;
-      const i = items.findIndex((q) => q.ref === selected);
-      const next = items[Math.min(items.length - 1, Math.max(0, i + step))];
-      if (next) setSelected(next.ref);
+    (step: number, extend = false) => {
+      if (!order.length) return;
+      const i = order.indexOf(selected ?? '');
+      const next = order[Math.min(order.length - 1, Math.max(0, i + step))];
+      if (next) go(next, extend);
     },
-    [items, selected],
+    [order, selected, go],
   );
+
+  /** Moves the cursor past the targets, ahead of an action that takes them out of the list. */
+  const leave = useCallback(() => {
+    const gone = new Set(targets.map((q) => q.ref));
+    const last = Math.max(...targets.map((q) => order.indexOf(q.ref)));
+    const next = order.slice(last + 1).find((r) => !gone.has(r)) ?? order.find((r) => !gone.has(r));
+    if (next) go(next);
+  }, [targets, order, go]);
 
   const box = useCallback((k: Kind) => {
     setFilter('inbox');
@@ -134,13 +159,15 @@ function Inbox() {
   useInboxKeys({
     current,
     move,
+    selectAll: all,
+    collapse,
     search: () => search.current?.focus(),
     archive: (q) => {
-      move(1);
-      act('archive', q, !q.archivedAt);
+      leave();
+      flip('archive', targets, q);
     },
-    toggleRead: (q) => act('read', q, !q.readAt),
-    pin: (q) => act('pin', q, !q.pinned),
+    toggleRead: (q) => flip('read', targets, q),
+    pin: (q) => flip('pin', targets, q),
     misfile: () => setAskMisfile((n) => n + 1),
     box,
   });
@@ -179,34 +206,46 @@ function Inbox() {
     <MessageList
       rows={rows}
       selected={selected}
+      picked={picked}
       filter={filter}
       kind={kind}
       tags={listing?.tags ?? []}
       text={text}
       searchRef={search}
       onText={setText}
-      onSelect={setSelected}
+      onSelect={press}
     />
   );
-  const reader = (
-    <Reader
-      item={current}
-      parent={items.find((q) => q.ref === current?.parent) ?? null}
-      tags={listing?.tags ?? []}
-      onTag={tagItem}
-      onSelect={setSelected}
-      onArchive={(q) => act('archive', q, !q.archivedAt)}
-      onPin={(q) => act('pin', q, !q.pinned)}
-      onUnread={(q) => act('read', q, !q.readAt)}
-      onReveal={(q, ref) => api.post('reveal', { id: q.ref, ref })}
-      onOpenPath={(q, path) => api.post('open-path', { id: q.ref, path })}
-      askMisfile={askMisfile}
-      onMisfile={(q, misfiled, why) => {
-        if (misfiled && q.ref === current?.ref) move(1);
-        misfile(q, misfiled, why);
-      }}
-    />
-  );
+  const reader =
+    targets.length > 1 && current ? (
+      <Bulk
+        items={targets}
+        lead={current}
+        onFlip={(path) => {
+          if (path === 'archive') leave();
+          flip(path, targets, current);
+        }}
+        onClear={collapse}
+      />
+    ) : (
+      <Reader
+        item={current}
+        parent={items.find((q) => q.ref === current?.parent) ?? null}
+        tags={listing?.tags ?? []}
+        onTag={tagItem}
+        onSelect={(ref) => go(ref)}
+        onArchive={(q) => flip('archive', [q], q)}
+        onPin={(q) => flip('pin', [q], q)}
+        onUnread={(q) => flip('read', [q], q)}
+        onReveal={(q, ref) => api.post('reveal', { id: q.ref, ref })}
+        onOpenPath={(q, path) => api.post('open-path', { id: q.ref, path })}
+        askMisfile={askMisfile}
+        onMisfile={(q, misfiled, why) => {
+          if (misfiled && q.ref === current?.ref) move(1);
+          misfile(q, misfiled, why);
+        }}
+      />
+    );
 
   return (
     <div className="app">

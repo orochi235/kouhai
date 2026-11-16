@@ -40,6 +40,7 @@
     "@weasel-js/icons": "^1.19.1",
     "@weasel-js/icons-plugin": "^1.19.1",
     "@weasel-js/prefs": "^1.19.1",
+    "@weasel-js/select": "^1.19.1",
     "@weasel-js/storage": "^1.19.1",
     "@weasel-js/theme": "^1.19.1",
     "@weasel-js/ui": "^1.19.1",
