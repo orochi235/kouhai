@@ -147,6 +147,15 @@ describe('Store', () => {
     expect(new Set([v0, v1, s.version()]).size).toBe(3);
   });
 
+  it('marks all read and names what it marked', () => {
+    const { s } = store();
+    s.take([q('a?'), t('b')], null, ctx);
+    s.settle('q-1', 'answered', 'yes');
+    s.settle('t-2', 'done', 'did');
+    expect(s.readAll().sort()).toEqual(['q-1', 't-2']);
+    expect(s.readAll()).toEqual([]);
+  });
+
   it('changes its version on two writes at the same clock time', () => {
     const { s } = store();
     s.take([q('x?')], null, ctx);

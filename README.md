@@ -38,7 +38,8 @@ what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed`
 its own open items after a long stretch of work or a compaction.
 
 On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,
-`m` misfiled, `/` search; Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
+`m` misfiled, `/` search, Mod+Z and Shift+Mod+Z undo and redo any of those (and tag edits and Mark all read);
+Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
 and whether opening an item marks it read). The columns are windease panes: drag a seam to resize.
 **Misfiled** marks an item that should never have been filed, with an optional reason, and
 archives it; the five latest go into the MCP server's instructions as examples of what not to

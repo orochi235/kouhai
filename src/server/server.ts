@@ -129,10 +129,14 @@ export function routes(store: Store): Record<string, Handler> {
       asked(() => {
         if (b.action === 'rename') return store.tags.rename(b.name, b.to);
         if (b.action === 'color') return store.tags.recolor(b.name, b.color);
-        if (b.action === 'delete') return store.tags.remove(b.name) ?? { deleted: b.name };
-        throw new Error('action is one of rename, color, delete');
+        if (b.action === 'delete') return store.tags.remove(b.name);
+        if (b.action === 'restore') return store.tags.restore(b.name, b.color, b.items);
+        throw new Error('action is one of rename, color, delete, restore');
       }),
-    'POST /api/read-all': () => ({ marked: store.readAll() }),
+    'POST /api/read-all': () => {
+      const refs = store.readAll();
+      return { marked: refs.length, refs };
+    },
     'POST /api/reveal': (_q, b) => {
       const q = need(b.id);
       // Only a path an item attached, so no outlet can open arbitrary files.

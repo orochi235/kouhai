@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Item, Tag } from '../api.ts';
+import type { Item, Tag, TagEdit } from '../api.ts';
 import { inkFor } from '../repoColors.ts';
 import './Tags.css';
 
@@ -90,12 +90,7 @@ type RailProps = {
   tags: Tag[];
   active: string | null;
   onPick: (name: string) => void;
-  onEdit: (body: {
-    action: 'rename' | 'color' | 'delete';
-    name: string;
-    to?: string;
-    color?: string;
-  }) => void;
+  onEdit: (body: TagEdit) => void;
 };
 
 /** The sidebar's tags: pick one to filter by it; the picked one can be renamed, recolored, or deleted. */

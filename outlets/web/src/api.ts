@@ -13,6 +13,14 @@ export type Listing = {
   items: Item[];
 };
 
+/** A change to a tag itself, as `POST /api/tags` takes it. */
+export type TagEdit = {
+  action: 'rename' | 'color' | 'delete';
+  name: string;
+  to?: string;
+  color?: string;
+};
+
 async function json<T>(r: Response): Promise<T> {
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? r.statusText);
   return r.json() as Promise<T>;

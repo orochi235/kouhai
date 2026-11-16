@@ -76,9 +76,14 @@ button {
   border-radius: 2px;
 }
 
-.quiet:hover {
+.quiet:hover:not(:disabled) {
   color: var(--ink);
   border-color: var(--rule);
+}
+
+.quiet:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .chip {

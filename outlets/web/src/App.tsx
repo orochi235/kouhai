@@ -4,8 +4,17 @@ import { EditorShell, useOpenPreferences } from '@weasel-js/editor';
 import { usePref } from '@weasel-js/prefs/react';
 import { ShortcutSheet, useShortcutSheetCommand } from '@weasel-js/ui/components/ShortcutSheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api, type Filter, type Item, type Kind, type Listing, watch } from './api.ts';
+import {
+  api,
+  type Filter,
+  type Item,
+  type Kind,
+  type Listing,
+  type TagEdit,
+  watch,
+} from './api.ts';
 import './App.css';
+import { useActions } from './actions.ts';
 import { MessageList } from './components/MessageList.tsx';
 import { Panes } from './components/Panes.tsx';
 import { Reader } from './components/Reader.tsx';
@@ -15,6 +24,7 @@ import { useInboxKeys } from './keys.ts';
 import { prefs } from './prefs.ts';
 import { repoSheet } from './repoColors.ts';
 import { thread } from './thread.ts';
+import { useUndo } from './undo.ts';
 
 const initialRef = () => new URLSearchParams(location.search).get('q');
 
@@ -85,14 +95,14 @@ function Inbox() {
     history.replaceState(null, '', url);
   }, [selected]);
 
-  const act = useCallback(
-    async (path: 'read' | 'archive' | 'pin', q: Item, on: boolean) => {
-      const key = path === 'read' ? 'read' : path === 'archive' ? 'archived' : 'pinned';
-      await api.post(path, { id: q.ref, [key]: on });
-      load();
-    },
-    [load],
-  );
+  const undo = useUndo(load);
+  const {
+    act,
+    tag: tagItem,
+    editTag,
+    misfile,
+    readAll,
+  } = useActions(undo.record, load, listing?.tags);
 
   // Opening a settled item is reading it, once per settlement, so `u` can mark it unread again.
   const autoRead = useRef('');
@@ -101,7 +111,7 @@ function Inbox() {
     const key = `${current.ref}:${current.settledAt}`;
     if (key === autoRead.current) return;
     autoRead.current = key;
-    if (!current.readAt) act('read', current, true);
+    if (!current.readAt) act('read', current, true, false);
   }, [current, act, readOnOpen]);
 
   const move = useCallback(
@@ -145,12 +155,10 @@ function Inbox() {
       tags={listing?.tags ?? []}
       tag={tag}
       onTag={(t) => setTag(t === tag ? null : t)}
-      onEditTag={async (body) => {
-        await api.post('tags', body);
-        // Changing the picked tag reloads by itself; calling load too would race it.
+      onEditTag={(body) => {
+        editTag(body);
         if (tag === body.name && body.action === 'rename') setTag(body.to ?? null);
         else if (tag === body.name && body.action === 'delete') setTag(null);
-        else load();
       }}
       offline={offline}
       onFilter={(f, k) => {
@@ -160,10 +168,9 @@ function Inbox() {
         setTag(null);
       }}
       onRepo={(r) => setRepo(r === repo ? null : r)}
-      onReadAll={async () => {
-        await api.post('read-all', {});
-        load();
-      }}
+      onReadAll={readAll}
+      onUndo={undo.canUndo ? undo.undo : undefined}
+      onRedo={undo.canRedo ? undo.redo : undefined}
       onShortcuts={() => setSheet(true)}
       onPreferences={openPrefs}
     />
@@ -186,10 +193,7 @@ function Inbox() {
       item={current}
       parent={items.find((q) => q.ref === current?.parent) ?? null}
       tags={listing?.tags ?? []}
-      onTag={async (q, t, on) => {
-        await api.post('tag', { id: q.ref, tag: t, on });
-        load();
-      }}
+      onTag={tagItem}
       onSelect={setSelected}
       onArchive={(q) => act('archive', q, !q.archivedAt)}
       onPin={(q) => act('pin', q, !q.pinned)}
@@ -197,10 +201,9 @@ function Inbox() {
       onReveal={(q, ref) => api.post('reveal', { id: q.ref, ref })}
       onOpenPath={(q, path) => api.post('open-path', { id: q.ref, path })}
       askMisfile={askMisfile}
-      onMisfile={async (q, misfiled, why) => {
+      onMisfile={(q, misfiled, why) => {
         if (misfiled && q.ref === current?.ref) move(1);
-        await api.post('misfile', { id: q.ref, misfiled, why });
-        load();
+        misfile(q, misfiled, why);
       }}
     />
   );

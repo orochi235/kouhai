@@ -122,11 +122,23 @@ export class Tags {
     return this.get(tag.name) as Tag;
   }
 
-  /** Deletes the tag and takes it off every item. */
-  remove(raw: unknown) {
+  /** Deletes the tag and takes it off every item; returns what it was, so it can be put back. */
+  remove(raw: unknown): { deleted: string; color: string; items: number[] } {
     const tag = this.need(raw);
+    const items = (
+      this.db.prepare('SELECT item FROM item_tags WHERE tag = ? ORDER BY item').all(tag.id) as Row[]
+    ).map((r) => Number(r.item));
     this.db.prepare('DELETE FROM item_tags WHERE tag = ?').run(tag.id);
     this.db.prepare('DELETE FROM tags WHERE id = ?').run(tag.id);
+    return { deleted: tag.name, color: tag.color, items };
+  }
+
+  /** Puts back a tag `remove` deleted, with its color, on the items it was on. */
+  restore(raw: unknown, color: unknown, items: unknown): Tag {
+    const tag = this.define(raw);
+    for (const item of Array.isArray(items) ? items : [])
+      if (Number.isInteger(item)) this.set(item, tag.name, true);
+    return this.recolor(tag.name, color);
   }
 
   /** Drops tag links to items that no longer exist. */

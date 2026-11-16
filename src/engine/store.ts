@@ -400,12 +400,15 @@ export class Store {
     return rows.map(toItem);
   }
 
-  readAll(): number {
+  /** Marks every unread item read; returns their refs, so the page can mark them unread again. */
+  readAll(): string[] {
     const at = this.now();
-    const { changes } = this.db
-      .prepare(`UPDATE items SET read_at = ?, updated_at = ? WHERE ${WHERE.unread}`)
-      .run(at, at);
-    return Number(changes);
+    const rows = this.db
+      .prepare(
+        `UPDATE items SET read_at = ?, updated_at = ? WHERE ${WHERE.unread} RETURNING id, kind`,
+      )
+      .all(at, at) as Row[];
+    return rows.map((r) => refOf(r.kind as Kind, Number(r.id)));
   }
 
   /** When this session's latest turn began, or null for a session with no turns yet. */

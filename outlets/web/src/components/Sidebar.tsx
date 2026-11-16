@@ -1,4 +1,4 @@
-import type { Filter, Kind, Listing, Repo, Tag } from '../api.ts';
+import type { Filter, Kind, Listing, Repo, Tag, TagEdit } from '../api.ts';
 import { repoClass } from '../repoColors.ts';
 import './Sidebar.css';
 import { TagRail } from './Tags.tsx';
@@ -22,11 +22,14 @@ type Props = {
   tags: Tag[];
   tag: string | null;
   onTag: (name: string) => void;
-  onEditTag: Parameters<typeof TagRail>[0]['onEdit'];
+  onEditTag: (body: TagEdit) => void;
   offline: boolean;
   onFilter: (f: Filter, kind: Kind | null) => void;
   onRepo: (r: string) => void;
   onReadAll: () => void;
+  /** Absent while there is nothing to undo, or to redo. */
+  onUndo?: () => void;
+  onRedo?: () => void;
   onShortcuts: () => void;
   onPreferences: () => void;
 };
@@ -45,6 +48,8 @@ export function Sidebar({
   onFilter,
   onRepo,
   onReadAll,
+  onUndo,
+  onRedo,
   onShortcuts,
   onPreferences,
 }: Props) {
@@ -105,6 +110,14 @@ export function Sidebar({
             Mark all read
           </button>
         )}
+        <p className="keys">
+          <button type="button" className="quiet" onClick={onUndo} disabled={!onUndo}>
+            Undo <kbd>⌘Z</kbd>
+          </button>
+          <button type="button" className="quiet" onClick={onRedo} disabled={!onRedo}>
+            Redo <kbd>⇧⌘Z</kbd>
+          </button>
+        </p>
         <p className="keys">
           <button type="button" className="quiet" onClick={onShortcuts}>
             Shortcuts <kbd>?</kbd>

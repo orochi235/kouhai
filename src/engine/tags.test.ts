@@ -54,9 +54,12 @@ describe('tags', () => {
     expect(s.version()).not.toBe(v);
     expect(s.get(1)?.tags).toEqual(['someday']);
     expect(s.tags.recolor('someday', '#ABCDEF').color).toBe('#abcdef');
-    s.tags.remove('someday');
+    const gone = s.tags.remove('someday');
     expect(s.get(1)?.tags).toEqual([]);
     expect(s.tags.all()).toEqual([]);
+    s.tags.restore(gone.deleted, gone.color, gone.items);
+    expect(s.get(1)?.tags).toEqual(['someday']);
+    expect(s.tags.get('someday')?.color).toBe('#abcdef');
   });
 
   it('refuses bad names, clashing renames, and bad colors', () => {
