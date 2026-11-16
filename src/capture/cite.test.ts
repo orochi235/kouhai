@@ -26,6 +26,13 @@ describe('refsIn', () => {
     });
   });
 
+  it('cites a #slug, bare or bracketed', () => {
+    expect(refsIn('per #cost-of-slugs and [#fix-it-now], not # head').cited).toEqual([
+      '#cost-of-slugs',
+      '#fix-it-now',
+    ]);
+  });
+
   it('ignores pasted or quoted text and repeats', () => {
     expect(refsIn('`[q-1]`\n> [q-2]\n[q-3] [q-3]').cited).toEqual(['q-3']);
   });

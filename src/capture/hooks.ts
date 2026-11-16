@@ -12,12 +12,12 @@ const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…
 
 /** The filing rule, the same on every prompt and in the MCP server's instructions. */
 export const RULE =
-  'File with dixeram\'s `take`: every direct question the user asks (kind "question"), and every ' +
+  'File with dixeram\'s `take`, giving each item a `slug`: every direct question the user asks (kind "question"), and every ' +
   'instruction you won\'t finish this turn (kind "task": queued, for later, or arriving mid-turn). ' +
   "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
   'question about what to work on next; or one about how something works when answering leads into ' +
   'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
-  'in one line what you filed ("Filed q-17, t-18.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
+  'in one line what you filed, giving each id with its slug ("Filed q-17 #cost-of-slugs, t-18 #fix-the-build.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
   'rather than on a line of its own ("…last sentence. [q-17]"), the id a link to the item when `take` ' +
   'or `settle` gives one; if `take` fails or is not among your tools, say so instead. A dixeram call ' +
   'alone in a step costs an extra request, so pair them: file a question you answer without running ' +

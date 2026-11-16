@@ -1,4 +1,5 @@
 import { ownWords } from '../engine/detect.ts';
+import { nameOf, SLUG } from '../engine/slug.ts';
 import type { Store } from '../engine/store.ts';
 import type { Item } from '../engine/types.ts';
 
@@ -6,7 +7,7 @@ import type { Item } from '../engine/types.ts';
 const MAX_ITEMS = 10;
 const NOTE_CAP = 6000;
 
-/** `[q-17]`, or the `[[q-17](link)]` an answer ends with. */
+/** `[q-17]`, or the `[[q-17](link)]` an answer ends with; `#slug` is cited too. */
 const CITED = /\[\[?([qt]-\d+)\]/gi;
 /** `q-17` standing alone, not part of a longer token such as `faq-17` or `q-17b`. */
 const BARE = /(?<![\w-])([qt]-\d+)(?![\w-])/gi;
@@ -19,7 +20,11 @@ const unique = (refs: string[]) => [...new Set(refs.map((r) => r.toLowerCase()))
  */
 export function refsIn(prompt: string): { cited: string[]; mentioned: string[] } {
   const own = ownWords(prompt);
-  const cited = unique([...own.matchAll(CITED)].map((m) => m[1] as string));
+  // A `#slug` is cited wherever it stands: nothing else in a prompt looks like one.
+  const cited = unique([
+    ...[...own.matchAll(CITED)].map((m) => m[1] as string),
+    ...[...own.matchAll(SLUG)].map((m) => `#${m[1]}`),
+  ]);
   const mentioned = unique([...own.matchAll(BARE)].map((m) => m[1] as string)).filter(
     (r) => !cited.includes(r),
   );
@@ -34,7 +39,7 @@ export function itemText(q: Item, cap = Infinity): string {
     : q.note.length > cap
       ? `${q.note.slice(0, cap)}… (cut at ${cap} of ${q.note.length} characters; dixeram's \`show\` tool returns all of it)`
       : q.note;
-  return `[${q.ref}] (${q.kind}, ${where}) asked: ${JSON.stringify(q.text)}\nAnswer: ${note}`;
+  return `[${nameOf(q)}] (${q.kind}, ${where}) asked: ${JSON.stringify(q.text)}\nAnswer: ${note}`;
 }
 
 /** Marks this answer of `q` shown to a session; false when it already was. A new settlement shows again. */

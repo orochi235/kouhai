@@ -249,6 +249,16 @@
   min-width: 6ch;
 }
 
+.slug {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .kind.kind-task {
   color: var(--stamp);
 }

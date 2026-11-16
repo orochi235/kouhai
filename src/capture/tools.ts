@@ -22,7 +22,7 @@ export const TOOLS = [
     description:
       "File what you owe, quoting or tightly paraphrasing the user. Pass the hook's `turn` id. An " +
       'item you can settle now takes its `outcome` and `note` here instead of a separate `settle`. ' +
-      'Returns ids like q-17 and t-18.',
+      'Returns ids like q-17 #cost-of-slugs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -34,6 +34,11 @@ export const TOOLS = [
             properties: {
               kind: { type: 'string', enum: KINDS },
               text: { type: 'string' },
+              slug: {
+                type: 'string',
+                description:
+                  'Two to five lowercase words naming it, hyphenated, e.g. cost-of-slugs; the user cites it as #cost-of-slugs.',
+              },
               parent: {
                 type: 'string',
                 description:
@@ -68,7 +73,7 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'The item id, e.g. q-17 or t-18.' },
+        id: { type: 'string', description: 'The item id or slug, e.g. q-17 or #cost-of-slugs.' },
         outcome: { type: 'string', enum: ALL_OUTCOMES },
         note: { type: 'string' },
         attachments: ATTACHMENTS,
@@ -82,7 +87,7 @@ export const TOOLS = [
       'Clear an answered question from the inbox as seen, only when the dixeram hook says to.',
     inputSchema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'The item id, e.g. q-17.' } },
+      properties: { id: { type: 'string', description: 'The item id or slug, e.g. q-17.' } },
       required: ['id'],
     },
   },
@@ -98,11 +103,15 @@ export const TOOLS = [
   {
     name: 'show',
     description:
-      'Read items by id, question and answer, when the user mentions one (q-17, t-4) meaning a dixeram item.',
+      'Read items by id or slug, question and answer, when the user mentions one (q-17, t-4, #cost-of-slugs) meaning a dixeram item.',
     inputSchema: {
       type: 'object',
       properties: {
-        ids: { type: 'array', items: { type: 'string' }, description: 'Item ids, e.g. q-17.' },
+        ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Item ids or slugs, e.g. q-17.',
+        },
       },
       required: ['ids'],
     },

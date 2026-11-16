@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
+import { slugOf, slugRef } from './slug.ts';
 import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
 import {
   type Attachment,
@@ -96,6 +97,7 @@ function toItem(r: Row): Item {
   return {
     id: Number(r.id),
     ref: refOf(kind, Number(r.id)),
+    slug: s('slug'),
     kind,
     text: String(r.text),
     outcome: s('outcome') as Outcome | null,
@@ -172,6 +174,30 @@ export class Store {
       this.db.exec(
         'ALTER TABLE items ADD COLUMN misfiled_at INTEGER; ALTER TABLE items ADD COLUMN misfiled_why TEXT',
       );
+    if (!cols.some((c) => c.name === 'slug'))
+      this.db.exec('ALTER TABLE items ADD COLUMN slug TEXT');
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS items_slug ON items (slug)');
+  }
+
+  /** The id a ref names: `q-17`, `17`, `#cost-of-slugs`, or `cost-of-slugs`. */
+  private idFor(ref: string | number): number | null {
+    const id = idOf(ref);
+    if (id != null || typeof ref === 'number') return id;
+    const slug = slugRef(ref);
+    if (!slug) return null;
+    const r = this.db.prepare('SELECT id FROM items WHERE slug = ?').get(slug) as Row | undefined;
+    return r ? Number(r.id) : null;
+  }
+
+  /** `slug` as given, or with `-2`, `-3`… when another item already holds it. */
+  private freeSlug(raw: string | null | undefined): string | null {
+    const base = raw ? slugOf(raw) : null;
+    if (!base) return null;
+    const taken = this.db.prepare('SELECT 1 FROM items WHERE slug = ?');
+    for (let n = 1; ; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      if (!taken.get(slug)) return slug;
+    }
   }
 
   close() {
@@ -225,7 +251,7 @@ export class Store {
    * must name a settled item; it is stored as that item's ref.
    */
   take(
-    items: { kind: Kind; text: string; parent?: string | null }[],
+    items: { kind: Kind; text: string; parent?: string | null; slug?: string | null }[],
     turnId: string | null,
     fallback: Context,
   ): Item[] {
@@ -233,11 +259,11 @@ export class Store {
     const ctx: Context = turn ?? fallback;
     const at = this.now();
     const insert = this.db.prepare(
-      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at, parent)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at, parent, slug)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const out: Item[] = [];
-    for (const { kind, text, parent } of items) {
+    for (const { kind, text, parent, slug } of items) {
       const t = text.trim();
       if (!t) continue;
       const p = parent ? this.get(parent) : null;
@@ -256,6 +282,7 @@ export class Store {
         at,
         at,
         p?.ref ?? null,
+        this.freeSlug(slug),
       );
       out.push(this.get(Number(lastInsertRowid)) as Item);
     }
@@ -292,7 +319,7 @@ export class Store {
   }
 
   get(ref: string | number): Item | null {
-    const id = idOf(ref);
+    const id = this.idFor(ref);
     if (id == null) return null;
     const r = this.db.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`).get(id) as
       | Row
@@ -342,7 +369,7 @@ export class Store {
   }
 
   private flag(ref: string | number, column: 'read_at' | 'archived_at', on: boolean) {
-    const id = idOf(ref);
+    const id = this.idFor(ref);
     if (id == null) return null;
     const at = this.now();
     this.db
@@ -360,7 +387,7 @@ export class Store {
   }
 
   setPinned(ref: string | number, pinned = true) {
-    const id = idOf(ref);
+    const id = this.idFor(ref);
     if (id == null) return null;
     this.db
       .prepare('UPDATE items SET pinned = ?, updated_at = ? WHERE id = ?')
@@ -373,7 +400,7 @@ export class Store {
    * it; `false` undoes both. Recent misfiles teach later sessions what not to file.
    */
   setMisfiled(ref: string | number, misfiled = true, why: string | null = null) {
-    const id = idOf(ref);
+    const id = this.idFor(ref);
     if (id == null) return null;
     const at = this.now();
     this.db
@@ -431,7 +458,7 @@ export class Store {
 
   /** Takes a settled item out of the inbox as already seen: read and archived at once. */
   clear(ref: string | number): Item | null {
-    const id = idOf(ref);
+    const id = this.idFor(ref);
     if (id == null) return null;
     const at = this.now();
     this.db

@@ -39,6 +39,8 @@ export type Item = Context & {
   id: number;
   /** `q-17` for a question, `t-17` for a task; the number alone identifies it. */
   ref: string;
+  /** A few words naming it, cited as `#cost-of-slugs`; null for items filed without one. */
+  slug: string | null;
   kind: Kind;
   text: string;
   /** Null while the item is owed. */

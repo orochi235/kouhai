@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { contextOf } from '../engine/context.ts';
 import { apiBase } from '../engine/paths.ts';
+import { nameOf } from '../engine/slug.ts';
 import type { Store } from '../engine/store.ts';
 import {
   ATTACHMENT_KINDS,
@@ -58,14 +59,28 @@ function attachmentsOf(v: unknown): Attachment[] {
   });
 }
 
-type Taken = { kind: Kind; text: string; parent: string | null; settled: Settled | null };
+type Taken = {
+  kind: Kind;
+  text: string;
+  parent: string | null;
+  slug: string | null;
+  settled: Settled | null;
+};
 type Settled = { outcome: Outcome; note: string; attachments: Attachment[] };
 
 function itemsOf(v: unknown): Taken[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((i) => {
     if (!i || typeof i !== 'object') return [];
-    const { kind, text: t, parent, outcome, note, attachments } = i as Record<string, unknown>;
+    const {
+      kind,
+      text: t,
+      parent,
+      slug,
+      outcome,
+      note,
+      attachments,
+    } = i as Record<string, unknown>;
     if (!KINDS.includes(kind as Kind) || typeof t !== 'string' || !t.trim()) return [];
     const settled =
       ALL_OUTCOMES.includes(outcome as Outcome) && typeof note === 'string' && note.trim()
@@ -76,6 +91,7 @@ function itemsOf(v: unknown): Taken[] {
         kind: kind as Kind,
         text: t,
         parent: typeof parent === 'string' && parent ? parent : null,
+        slug: typeof slug === 'string' && slug ? slug : null,
         settled,
       },
     ];
@@ -120,7 +136,7 @@ export function callTool(
     const filed = store.take(items, turn, fallback);
     // Filed first, so an outcome that doesn't fit its kind still leaves the item owed, not lost.
     const lines = filed.map((i, n) => {
-      const head = `${i.ref}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`;
+      const head = `${nameOf(i)}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`;
       const s = items[n]?.settled;
       if (!s) return { head, owed: true, question: false };
       try {
@@ -140,7 +156,7 @@ export function callTool(
     });
     return text(
       `Filed in the dixeram ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
-        'Tell the user in one line what you filed' +
+        'Tell the user in one line what you filed, naming each by id and slug as above' +
         (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
         (lines.some((l) => l.question)
           ? `; ${markerRule(
@@ -194,7 +210,7 @@ export function callTool(
     const owed = store.list('owed', { session });
     return text(
       owed.length
-        ? `Still owed:\n${owed.map((i) => `${i.ref} (${i.kind}): ${i.text}`).join('\n')}`
+        ? `Still owed:\n${owed.map((i) => `${nameOf(i)} (${i.kind}): ${i.text}`).join('\n')}`
         : 'Nothing owed in this session.',
     );
   }

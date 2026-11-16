@@ -1,3 +1,4 @@
+import { nameOf } from '@core/slug.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Attachment, Item, Outcome, Tag } from '../api.ts';
 import { drawDiagrams } from '../diagrams.ts';
@@ -83,7 +84,7 @@ export function Reader({
       <div className="toolbar">
         <Copy
           text={citation([q.ref])}
-          label={q.ref}
+          label={nameOf(q)}
           className="ref"
           title={`Copy ${citation([q.ref])} to cite this item in a prompt`}
         />
