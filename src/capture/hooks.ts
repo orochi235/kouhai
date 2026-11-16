@@ -88,7 +88,7 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const turn = store.addTurn(ctx, prompt);
   const { forced } = detect(prompt);
   const broken = missingTake(store, ctx.session, ctx.transcript);
-  const cited = citations(store, prompt);
+  const cited = citations(store, prompt, ctx.session);
   return {
     ...(broken
       ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }

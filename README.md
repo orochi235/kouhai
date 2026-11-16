@@ -38,7 +38,9 @@ what it filed, and Claude ends an answer in chat with `[q-17]`, linked to the it
 its own open items after a long stretch of work or a compaction.
 
 To point Claude at an item, cite it in brackets in a prompt: `[q-17]`, or the `[[q-17](…)]` an answer ends with.
-The prompt hook brings in that item's question and answer, up to five items per prompt. A bare `q-17` brings in nothing.
+The prompt hook brings in that item's question and answer, up to ten per prompt and 6,000 characters per answer
+(the `show` tool returns the rest), and each answer once per session until it is settled again. A bare `q-17` comes in only if Claude takes it for an item and reads it with the `show`
+tool; an id inside a longer token, such as `faq-17`, is never matched.
 
 On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,
 `m` misfiled, `/` search; click, Cmd-click, and Shift-click select rows, Shift+`j`/`k` extend the

@@ -10,10 +10,11 @@ import {
   type Context,
   KINDS,
   type Kind,
-  OUTCOMES,
   type Outcome,
 } from '../engine/types.ts';
+import { itemText, markShown } from './cite.ts';
 import { RULE } from './hooks.ts';
+import { ALL_OUTCOMES, TOOLS } from './tools.ts';
 
 const VERSION = '0.4.0';
 
@@ -32,102 +33,6 @@ export function instructions(store: Store): string {
     .join('; ');
   return `${INSTRUCTIONS} The user marked these filed by mistake; don't file their like: ${list}.`;
 }
-
-const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
-
-const ATTACHMENTS = {
-  type: 'array',
-  items: {
-    type: 'object',
-    properties: {
-      kind: { type: 'string', enum: ATTACHMENT_KINDS },
-      ref: { type: 'string', description: 'URL or absolute path.' },
-      label: { type: 'string' },
-    },
-    required: ['kind', 'ref'],
-  },
-};
-
-const TOOLS = [
-  {
-    name: 'take',
-    description:
-      "File what you owe, quoting or tightly paraphrasing the user. Pass the hook's `turn` id. An " +
-      'item you can settle now takes its `outcome` and `note` here instead of a separate `settle`. ' +
-      'Returns ids like q-17 and t-18.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          minItems: 1,
-          items: {
-            type: 'object',
-            properties: {
-              kind: { type: 'string', enum: KINDS },
-              text: { type: 'string' },
-              parent: {
-                type: 'string',
-                description:
-                  'For a follow-up question: the id of the settled item whose answer it responds to, e.g. q-17.',
-              },
-              outcome: {
-                type: 'string',
-                enum: ALL_OUTCOMES,
-                description: 'To file it already settled, with `note`.',
-              },
-              note: { type: 'string', description: 'As for `settle`.' },
-            },
-            required: ['kind', 'text'],
-          },
-        },
-        turn: { type: 'string', description: 'The turn id from the dixeram hook.' },
-      },
-      required: ['items'],
-    },
-  },
-  {
-    name: 'settle',
-    description:
-      'Settle an item: a question as answered, a task as done, either as dropped (say why) or deferred ' +
-      '(moved to a durable home such as a TODO entry or an issue; say where). Work waiting on a later ' +
-      'turn stays owed. The note is markdown read away from this chat (a code block naming its language is highlighted; ```mermaid draws a diagram), so it stands on its own: an ' +
-      'answer leads with the answer; a task says what was done. Link files as markdown links to ' +
-      'absolute paths, and commits, PRs, issues, docs, and artifacts by URL. A line saying work landed ' +
-      'in a commit starts with ✅ and links it (`https://github.com/<owner>/<repo>/commit/<sha>`, from ' +
-      '`git remote get-url origin`; else the short sha in backticks). Settling again replaces the ' +
-      'note and marks it unread. `attachments` adds an artifact URL, a file, or a link.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'The item id, e.g. q-17 or t-18.' },
-        outcome: { type: 'string', enum: ALL_OUTCOMES },
-        note: { type: 'string' },
-        attachments: ATTACHMENTS,
-      },
-      required: ['id', 'outcome', 'note'],
-    },
-  },
-  {
-    name: 'clear',
-    description:
-      'Clear an answered question from the inbox as seen, only when the dixeram hook says to.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: { type: 'string', description: 'The item id, e.g. q-17.' } },
-      required: ['id'],
-    },
-  },
-  {
-    name: 'owed',
-    description:
-      "List what this session still owes; use it after long work or a compaction, before saying you're done.",
-    inputSchema: {
-      type: 'object',
-      properties: { turn: { type: 'string', description: 'Any turn id from this session.' } },
-    },
-  },
-];
 
 type Rpc = {
   jsonrpc: '2.0';
@@ -274,6 +179,13 @@ export function callTool(
     if (!item.outcome) return text(`${item.ref} is still owed; settle it first.`, true);
     store.clear(item.id);
     return text(`${item.ref} cleared from the inbox as seen.`);
+  }
+  if (name === 'show') {
+    const ids = Array.isArray(args.ids) ? args.ids : [args.ids];
+    const items = ids.flatMap((id) => (id == null ? [] : (store.get(String(id)) ?? [])));
+    if (!items.length) return text(`No item ${ids.join(', ')}.`, true);
+    for (const q of items) markShown(store, fallback.session, q);
+    return text(items.map((q) => itemText(q)).join('\n\n'));
   }
   if (name === 'owed') {
     const turn = typeof args.turn === 'string' ? store.turn(args.turn) : null;

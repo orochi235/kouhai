@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
+import { citations } from './cite.ts';
 import { handle, instructions, relayReply } from './mcp.ts';
 
 const fb = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
@@ -15,7 +16,7 @@ const call = (s: Store, name: string, args: object) =>
   };
 
 describe('mcp', () => {
-  it('lists take, settle, clear, and owed', () => {
+  it('lists take, settle, clear, owed, and show', () => {
     const out = handle(new Store(':memory:'), fb, {
       jsonrpc: '2.0',
       id: 1,
@@ -23,7 +24,22 @@ describe('mcp', () => {
     }) as {
       result: { tools: { name: string }[] };
     };
-    expect(out.result.tools.map((t) => t.name)).toEqual(['take', 'settle', 'clear', 'owed']);
+    expect(out.result.tools.map((t) => t.name)).toEqual([
+      'take',
+      'settle',
+      'clear',
+      'owed',
+      'show',
+    ]);
+  });
+
+  it('shows items by id, and marks them shown to the session', () => {
+    const s = new Store(':memory:');
+    call(s, 'take', { items: [{ kind: 'question', text: 'why?' }] });
+    call(s, 'settle', { id: 'q-1', outcome: 'answered', note: 'because' });
+    expect(call(s, 'show', { ids: ['q-1'] }).result.content[0]?.text).toContain('Answer: because');
+    expect(call(s, 'show', { ids: ['q-9'] }).result.content[0]?.text).toContain('No item');
+    expect(citations(s, '[q-1]', 's')).toContain('shown earlier');
   });
 
   it('takes, lists owed, and settles with attachments, dropping malformed ones', () => {
