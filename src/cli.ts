@@ -16,10 +16,13 @@ import { runDaemon } from './server/server.ts';
 
 const USAGE = `dixeram: a ledger of what Claude sessions owe you
 
-  dixeram ls [${FILTERS.join('|')}]   list items (default: unread)
+  dixeram ls [${FILTERS.join('|')}] [questions|tasks] [--tag <tag>]
+                                     list items (default: unread)
   dixeram show <id>                  print one item and how it was settled
   dixeram read <id>...               mark settled items read
   dixeram misfile <id> [why]         mark an item as filed by mistake (--undo to reverse)
+  dixeram tag <id> <tag>             put one of your tags on an item (--undo to take it off)
+  dixeram tags                       list your tags and how many items carry each
   dixeram open [q-id]                open the inbox page
   dixeram prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
@@ -91,6 +94,8 @@ async function main(argv: string[]) {
       return;
     }
     case 'ls': {
+      const at = rest.indexOf('--tag');
+      const tag = at >= 0 ? rest.splice(at, 2)[1] : undefined;
       const plural: Record<string, Kind> = { questions: 'question', tasks: 'task' };
       const kinds = rest
         .map((a) => plural[a] ?? a)
@@ -99,7 +104,7 @@ async function main(argv: string[]) {
       const f = (rest.find((a) => !(a in plural) && !KINDS.includes(a as Kind)) ??
         'unread') as Filter;
       if (!FILTERS.includes(f)) throw new Error(`filter is one of ${FILTERS.join(', ')}`);
-      const qs = new Store().list(f, { kind });
+      const qs = new Store().list(f, { kind, tag });
       console.log(qs.length ? qs.map(line).join('\n') : `nothing ${f}${kind ? ` (${kind}s)` : ''}`);
       return;
     }
@@ -127,6 +132,22 @@ async function main(argv: string[]) {
       const q = new Store().setMisfiled(ref, !undo, why.join(' ') || null);
       if (!q) return console.error(`no item ${ref}`);
       console.log(undo ? `${q.ref} restored` : `${q.ref} marked misfiled and archived`);
+      return;
+    }
+    case 'tag': {
+      const undo = rest.includes('--undo');
+      const [ref, ...name] = rest.filter((a) => a !== '--undo');
+      if (!ref || !name.length) return console.error('usage: dixeram tag <id> <tag> [--undo]');
+      const store = new Store();
+      const q = store.get(ref);
+      if (!q) return console.error(`no item ${ref}`);
+      store.tags.set(q.id, name.join(' '), !undo);
+      console.log(`${q.ref}: ${store.get(q.id)?.tags.join(', ') || 'no tags'}`);
+      return;
+    }
+    case 'tags': {
+      const tags = new Store().tags.all();
+      console.log(tags.length ? tags.map((t) => `${t.name}  ${t.count}`).join('\n') : 'no tags');
       return;
     }
     case 'open': {

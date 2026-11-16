@@ -78,6 +78,14 @@ export function routes(store: Store): Record<string, Handler> {
     if (!q) throw new HttpError(404, `no item ${id}`);
     return q;
   };
+  // A tag the user named badly is their mistake, not the server's.
+  const asked = <T>(run: () => T): T => {
+    try {
+      return run();
+    } catch (err) {
+      throw new HttpError(400, (err as Error).message);
+    }
+  };
   return {
     'GET /api/version': () => ({ version: store.version() }),
     'GET /api/items': (q) => {
@@ -91,10 +99,12 @@ export function routes(store: Store): Record<string, Handler> {
         version: store.version(),
         counts: store.counts(),
         repos: repos(store.list('inbox')),
+        tags: store.tags.all(),
         items: store.list(f, {
           repo: q.get('repo') ?? undefined,
           text: q.get('text') ?? undefined,
           kind: kind as Kind | undefined,
+          tag: q.get('tag') || undefined,
           limit: limit ? Math.min(500, Math.max(1, Number(limit) || 1)) : undefined,
         }),
       };
@@ -109,6 +119,19 @@ export function routes(store: Store): Record<string, Handler> {
         b.misfiled !== false,
         typeof b.why === 'string' ? b.why : null,
       ),
+    'GET /api/tags': () => store.tags.all(),
+    'POST /api/tag': (_q, b) => {
+      const q = need(b.id);
+      asked(() => store.tags.set(q.id, b.tag, b.on !== false));
+      return store.get(q.id);
+    },
+    'POST /api/tags': (_q, b) =>
+      asked(() => {
+        if (b.action === 'rename') return store.tags.rename(b.name, b.to);
+        if (b.action === 'color') return store.tags.recolor(b.name, b.color);
+        if (b.action === 'delete') return store.tags.remove(b.name) ?? { deleted: b.name };
+        throw new Error('action is one of rename, color, delete');
+      }),
     'POST /api/read-all': () => ({ marked: store.readAll() }),
     'POST /api/reveal': (_q, b) => {
       const q = need(b.id);

@@ -120,7 +120,7 @@
   width: 9px;
   height: 9px;
   border-radius: 2px;
-  background: var(--repo-bg, var(--rule));
+  background: var(--chip-bg, var(--rule));
   box-shadow: 0 0 0 1px #0002;
   flex: none;
 }

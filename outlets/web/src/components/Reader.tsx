@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Attachment, Item, Outcome } from '../api.ts';
+import type { Attachment, Item, Outcome, Tag } from '../api.ts';
 import { imageUrl, isImagePath } from '../images.ts';
 import { render } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
@@ -7,11 +7,14 @@ import { stamp } from '../time.ts';
 import { Follows } from './Follows.tsx';
 import { MisfileButton, MisfiledNote } from './Misfile.tsx';
 import './Reader.css';
+import { TagBar } from './Tags.tsx';
 
 type Props = {
   item: Item | null;
   /** The listed item this one follows up on. */
   parent: Item | null;
+  tags: Tag[];
+  onTag: (q: Item, tag: string, on: boolean) => void;
   onSelect: (ref: string) => void;
   onArchive: (q: Item) => void;
   onPin: (q: Item) => void;
@@ -65,6 +68,8 @@ function Copy({ text, label }: { text: string; label: string }) {
 export function Reader({
   item: q,
   parent,
+  tags,
+  onTag,
   onSelect,
   onArchive,
   onPin,
@@ -142,6 +147,7 @@ export function Reader({
               </div>
             )}
           </dl>
+          <TagBar item={q} tags={tags} onTag={onTag} />
         </header>
 
         {q.note ? (

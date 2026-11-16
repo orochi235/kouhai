@@ -15,6 +15,6 @@ export function inkFor(bg: string): string {
 export function repoSheet(repos: Repo[]): string {
   return repos
     .flatMap((r) => (r.hued?.bg ? [{ repo: r.repo, bg: r.hued.bg, fg: r.hued.fg }] : []))
-    .map((r) => `.${repoClass(r.repo)}{--repo-bg:${r.bg};--repo-fg:${r.fg || inkFor(r.bg)}}`)
+    .map((r) => `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)}}`)
     .join('\n');
 }

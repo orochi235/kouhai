@@ -1,10 +1,11 @@
 import type { RefObject } from 'react';
-import type { Filter, Item, Kind } from '../api.ts';
+import type { Filter, Item, Kind, Tag } from '../api.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import type { Row } from '../thread.ts';
 import { age } from '../time.ts';
 import './MessageList.css';
+import { TagChips } from './Tags.tsx';
 
 const EMPTY: Record<Filter, string> = {
   inbox: 'Nothing here. Ask Claude something mid-task, or queue up work, and it lands here.',
@@ -25,6 +26,7 @@ type Props = {
   selected: string | null;
   filter: Filter;
   kind: Kind | null;
+  tags: Tag[];
   text: string;
   searchRef: RefObject<HTMLInputElement | null>;
   onText: (t: string) => void;
@@ -36,6 +38,7 @@ export function MessageList({
   selected,
   filter,
   kind,
+  tags,
   text,
   searchRef,
   onText,
@@ -83,6 +86,7 @@ export function MessageList({
                       <span className={`outcome ${q.outcome}`}>{q.outcome}</span>
                     )}
                     {q.pinned && <span className="pin">pinned</span>}
+                    <TagChips names={q.tags} tags={tags} />
                     <time>{age(q.settledAt ?? q.raisedAt)}</time>
                   </span>
                   <span className="q" dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }} />

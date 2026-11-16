@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
+import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
 import {
   type Attachment,
   type Context,
@@ -103,6 +104,7 @@ function toItem(r: Row): Item {
     parent: s('parent'),
     misfiledAt: n('misfiled_at'),
     misfiledWhy: s('misfiled_why'),
+    tags: tagNames(r.tag_names),
   };
 }
 
@@ -118,6 +120,7 @@ const WHERE: Record<Filter, string> = {
 export class Store {
   db: DatabaseSync;
   now: () => number;
+  tags: Tags;
 
   constructor(path = dbPath(), now: () => number = Date.now) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
@@ -127,6 +130,7 @@ export class Store {
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;');
     this.db.exec(TURNS);
     this.migrate();
+    this.tags = new Tags(this.db, now);
   }
 
   private has(table: string): boolean {
@@ -276,19 +280,32 @@ export class Store {
   get(ref: string | number): Item | null {
     const id = idOf(ref);
     if (id == null) return null;
-    const r = this.db.prepare('SELECT * FROM items WHERE id = ?').get(id) as Row | undefined;
+    const r = this.db.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`).get(id) as
+      | Row
+      | undefined;
     return r ? toItem(r) : null;
   }
 
   list(
     filter: Filter = 'inbox',
-    opts: { repo?: string; text?: string; session?: string; kind?: Kind; limit?: number } = {},
+    opts: {
+      repo?: string;
+      text?: string;
+      session?: string;
+      kind?: Kind;
+      tag?: string;
+      limit?: number;
+    } = {},
   ) {
     const where = [WHERE[filter]];
     const args: string[] = [];
     if (opts.kind) {
       where.push('kind = ?');
       args.push(opts.kind);
+    }
+    if (opts.tag) {
+      where.push(HAS_TAG);
+      args.push(opts.tag);
     }
     if (opts.repo) {
       where.push('repo = ?');
@@ -304,7 +321,7 @@ export class Store {
     }
     const rows = this.db
       .prepare(
-        `SELECT * FROM items WHERE ${where.join(' AND ')} ORDER BY COALESCE(settled_at, raised_at) DESC LIMIT ${opts.limit ?? 500}`,
+        `SELECT ${ITEM_COLUMNS} FROM items WHERE ${where.join(' AND ')} ORDER BY COALESCE(settled_at, raised_at) DESC LIMIT ${opts.limit ?? 500}`,
       )
       .all(...args) as Row[];
     return rows.map(toItem);
@@ -363,7 +380,7 @@ export class Store {
   misfiles(limit = 10): Item[] {
     const rows = this.db
       .prepare(
-        'SELECT * FROM items WHERE misfiled_at IS NOT NULL ORDER BY misfiled_at DESC LIMIT ?',
+        `SELECT ${ITEM_COLUMNS} FROM items WHERE misfiled_at IS NOT NULL ORDER BY misfiled_at DESC LIMIT ?`,
       )
       .all(limit) as Row[];
     return rows.map(toItem);
@@ -389,7 +406,7 @@ export class Store {
   settledSince(session: string, since: number): Item[] {
     const rows = this.db
       .prepare(
-        'SELECT * FROM items WHERE session = ? AND outcome IS NOT NULL AND settled_at >= ? ORDER BY id',
+        `SELECT ${ITEM_COLUMNS} FROM items WHERE session = ? AND outcome IS NOT NULL AND settled_at >= ? ORDER BY id`,
       )
       .all(session, since) as Row[];
     return rows.map(toItem);
@@ -447,7 +464,7 @@ export class Store {
     const r = this.db
       .prepare('SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS t FROM items')
       .get() as Row;
-    return `${r.n}:${r.t}`;
+    return `${r.n}:${r.t}:${this.tags.version()}`;
   }
 
   prune(): { items: number; turns: number } {
@@ -461,6 +478,7 @@ export class Store {
       )
       .run(now - TURN_TTL_MS);
     this.db.prepare('DELETE FROM chased WHERE at < ?').run(now - TURN_TTL_MS);
+    this.tags.prune();
     return { items: Number(q.changes), turns: Number(t.changes) };
   }
 }

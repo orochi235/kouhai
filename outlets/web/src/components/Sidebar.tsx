@@ -1,6 +1,7 @@
-import type { Filter, Kind, Listing, Repo } from '../api.ts';
+import type { Filter, Kind, Listing, Repo, Tag } from '../api.ts';
 import { repoClass } from '../repoColors.ts';
 import './Sidebar.css';
+import { TagRail } from './Tags.tsx';
 
 /** The two inboxes split the ledger by kind; the views below them span both. */
 const BOXES: { filter: Filter; kind?: Kind; label: string; count?: keyof Listing['counts'] }[] = [
@@ -18,6 +19,10 @@ type Props = {
   repo: string | null;
   counts: Listing['counts'] | undefined;
   repos: Repo[];
+  tags: Tag[];
+  tag: string | null;
+  onTag: (name: string) => void;
+  onEditTag: Parameters<typeof TagRail>[0]['onEdit'];
   offline: boolean;
   onFilter: (f: Filter, kind: Kind | null) => void;
   onRepo: (r: string) => void;
@@ -30,6 +35,10 @@ export function Sidebar({
   repo,
   counts,
   repos,
+  tags,
+  tag,
+  onTag,
+  onEditTag,
   offline,
   onFilter,
   onRepo,
@@ -84,6 +93,8 @@ export function Sidebar({
         </>
       )}
 
+      <TagRail tags={tags} active={tag} onPick={onTag} onEdit={onEditTag} />
+
       <footer className="rail-foot">
         {counts && counts.unread > 0 && (
           <button type="button" className="quiet" onClick={onReadAll}>
@@ -93,7 +104,7 @@ export function Sidebar({
         <p className="keys">
           <kbd>j</kbd>
           <kbd>k</kbd> move · <kbd>e</kbd> archive · <kbd>u</kbd> unread · <kbd>p</kbd> pin ·{' '}
-          <kbd>/</kbd> search
+          <kbd>m</kbd> misfiled · <kbd>/</kbd> search
         </p>
         {offline && <p className="offline">The daemon is not answering on :8771</p>}
       </footer>

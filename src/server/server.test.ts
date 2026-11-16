@@ -38,6 +38,22 @@ describe('daemon', () => {
     expect(r.status).toBe(404);
   });
 
+  it('tags an item, filters by the tag, and refuses a bad tag action', async () => {
+    const { s, base, post } = await up();
+    s.take([{ kind: 'task', text: 'do it' }], null, ctx);
+    expect((await post('/api/tag', { id: 't-1', tag: 'later' })).tags).toEqual(['later']);
+    const list = await fetch(`${base}/api/items?tag=later`).then((r) => r.json());
+    expect(list.items.map((i: { ref: string }) => i.ref)).toEqual(['t-1']);
+    expect(list.tags[0]).toMatchObject({ name: 'later', count: 1 });
+    await post('/api/tags', { action: 'rename', name: 'later', to: 'someday' });
+    expect(s.get('t-1')?.tags).toEqual(['someday']);
+    const bad = await fetch(`${base}/api/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'color', name: 'someday', color: 'red' }),
+    });
+    expect(bad.status).toBe(400);
+  });
+
   it('serves an image the item attached or its note links, and nothing else', async () => {
     const { s, base } = await up();
     const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));

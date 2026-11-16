@@ -40,7 +40,9 @@ its own open items after a long stretch of work or a compaction.
 On the page: `j`/`k` move, `e` archive, `u` toggle unread, `p` pin, `m` misfiled, `/` search.
 **Misfiled** marks an item that should never have been filed, with an optional reason, and
 archives it; the ten latest go into the MCP server's instructions as examples of what not to
-file, so a new session learns from them (`dixeram misfile <id> [why]` does the same). Opening a settled
+file, so a new session learns from them (`dixeram misfile <id> [why]` does the same).
+**Tags** are your own labels: add one from an item's reader (a new name defines it), filter by it
+from the sidebar, and rename, recolor, or delete it there. Claude never sets them. Opening a settled
 item marks it read. `?q=q-17` opens one directly. A file a note links to opens when clicked; the
 daemon opens only absolute paths that note itself links. An attached image, and a local image the
 note shows with `![](/abs/path.png)`, appear inline. A claude.ai artifact stays a link, since
@@ -62,12 +64,14 @@ API. A browser outlet such as a stream overlay needs only the API:
 
 | Endpoint                                                      | Gives                                                               |
 | ------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `GET /api/items?filter=owed&kind=task&repo=&text=&limit=`     | items, counts, and per-repo summaries                               |
+| `GET /api/items?filter=owed&kind=task&repo=&tag=&text=&limit=` | items, counts, per-repo summaries, and tags                        |
 | `GET /api/item?id=t-18`                                       | one item                                                            |
 | `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
 | `GET /api/image?id=q-17&path=`                                | an image the item attached or its note links, and no other          |
 | `POST /api/read`, `/api/archive`, `/api/pin`, `/api/read-all` | `{ id, read \| archived \| pinned }`                                |
 | `POST /api/misfile`                                           | `{ id, misfiled, why }`                                             |
+| `POST /api/tag`                                               | `{ id, tag, on }`; setting an unknown tag defines it                |
+| `POST /api/tags`                                              | `{ action: rename \| color \| delete, name, to, color }`           |
 
 ## Install
 
@@ -87,7 +91,9 @@ stand-in that says how to install, so sessions start without errors.
 ## CLI
 
 ```
-dixeram ls [inbox|owed|unread|pinned|archived|all] [questions|tasks]
+dixeram ls [inbox|owed|unread|pinned|archived|all] [questions|tasks] [--tag later]
+dixeram tag q-17 later [--undo]
+dixeram tags
 dixeram show t-18
 dixeram read q-17
 dixeram open [q-17]

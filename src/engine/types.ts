@@ -59,8 +59,12 @@ export type Item = Context & {
   /** When the user marked it as something that should never have been filed. */
   misfiledAt: number | null;
   /** Their reason, if they gave one. */
-  misfiledWhy: string | null;
+  misfiledWhy: string | null /** The user's tags on it, by name. */;
+  tags: string[];
 };
+
+/** A label the user defined; `count` is how many unarchived items carry it. */
+export type Tag = { id: number; name: string; color: string; count: number };
 
 export type Filter = 'inbox' | 'owed' | 'unread' | 'pinned' | 'archived' | 'all';
 export const FILTERS: Filter[] = ['inbox', 'owed', 'unread', 'pinned', 'archived', 'all'];

@@ -4,6 +4,7 @@ import './App.css';
 import { MessageList } from './components/MessageList.tsx';
 import { Reader } from './components/Reader.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
+import { tagSheet } from './components/Tags.tsx';
 import { repoSheet } from './repoColors.ts';
 import { thread } from './thread.ts';
 
@@ -11,8 +12,11 @@ const initialRef = () => new URLSearchParams(location.search).get('q');
 
 export function App() {
   const [filter, setFilter] = useState<Filter>('inbox');
-  const [kind, setKind] = useState<Kind | null>('question');
+  const [kind, setKind] = useState<Kind | null>(() =>
+    initialRef()?.startsWith('t-') ? 'task' : 'question',
+  );
   const [repo, setRepo] = useState<string | null>(null);
+  const [tag, setTag] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [listing, setListing] = useState<Listing | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRef);
@@ -23,14 +27,14 @@ export function App() {
 
   const load = useCallback(async () => {
     try {
-      const l = await api.list(filter, kind, repo, text);
+      const l = await api.list(filter, kind, repo, tag, text);
       version.current = l.version;
       setListing(l);
       setOffline(false);
     } catch {
       setOffline(true);
     }
-  }, [filter, kind, repo, text]);
+  }, [filter, kind, repo, tag, text]);
 
   useEffect(() => {
     load();
@@ -114,18 +118,29 @@ export function App() {
 
   return (
     <div className="app">
-      <style>{repoSheet(listing?.repos ?? [])}</style>
+      <style>{`${repoSheet(listing?.repos ?? [])}\n${tagSheet(listing?.tags ?? [])}`}</style>
       <Sidebar
         filter={filter}
         kind={kind}
         repo={repo}
         counts={listing?.counts}
         repos={listing?.repos ?? []}
+        tags={listing?.tags ?? []}
+        tag={tag}
+        onTag={(t) => setTag(t === tag ? null : t)}
+        onEditTag={async (body) => {
+          await api.post('tags', body);
+          // Changing the picked tag reloads by itself; calling load too would race it.
+          if (tag === body.name && body.action === 'rename') setTag(body.to ?? null);
+          else if (tag === body.name && body.action === 'delete') setTag(null);
+          else load();
+        }}
         offline={offline}
         onFilter={(f, k) => {
           setFilter(f);
           setKind(k);
           setRepo(null);
+          setTag(null);
         }}
         onRepo={(r) => setRepo(r === repo ? null : r)}
         onReadAll={async () => {
@@ -138,6 +153,7 @@ export function App() {
         selected={selected}
         filter={filter}
         kind={kind}
+        tags={listing?.tags ?? []}
         text={text}
         searchRef={search}
         onText={setText}
@@ -146,6 +162,11 @@ export function App() {
       <Reader
         item={current}
         parent={items.find((q) => q.ref === current?.parent) ?? null}
+        tags={listing?.tags ?? []}
+        onTag={async (q, t, on) => {
+          await api.post('tag', { id: q.ref, tag: t, on });
+          load();
+        }}
         onSelect={setSelected}
         onArchive={(q) => act('archive', q, !q.archivedAt)}
         onPin={(q) => act('pin', q, !q.pinned)}
