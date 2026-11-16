@@ -34,7 +34,7 @@ Start a prompt with `??`, or put `(??)` anywhere in it, to have its question fil
 rule says, for instance a "what's next?" you want a lasting answer to; the rule otherwise skips those.
 
 Each stage says what it did in the transcript: the hooks print a `dixeram ▸` line, Claude says
-what it filed, and Claude ends an answer in chat with `(q-17 → inbox)`. `owed` lets Claude list
+what it filed, and Claude ends an answer in chat with `[q-17]`, linked to the item while the ledger UI runs. `owed` lets Claude list
 its own open items after a long stretch of work or a compaction.
 
 On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,

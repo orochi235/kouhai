@@ -189,7 +189,7 @@ function uiUp(): boolean {
 /** How to end a chat answer with an item's marker: a link to the item while the UI runs, else the bare id. */
 function markerRule(refs: readonly string[], link: (ref: string) => string): string {
   const shown = uiUp() ? refs.map((r) => `[${r}](${link(r)})`).join(', ') : refs.join(', ');
-  return `end an answer in chat with "(${shown} → inbox)", appended to its last paragraph rather than on a line of its own`;
+  return `end an answer in chat with "[${shown}]", appended to its last paragraph rather than on a line of its own`;
 }
 
 export function callTool(
