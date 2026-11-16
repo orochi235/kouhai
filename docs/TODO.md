@@ -12,3 +12,10 @@
   items source-qualified identity and idempotency keys, rather than having another parser imitate
   Claude's records; test with mixed-source fixtures whose unqualified session ids collide. The full
   adapter plan, unbuilt, is [CHATGPT-SUPPORT.md](../CHATGPT-SUPPORT.md). From the 2026-11-14 review.
+
+- **Pick the reader's project tint, then delete the tint lab.** The reader pane is washed in its
+  project's `.hued` background at 7% (`outlets/web/src/components/Reader.css`), a first attempt; it
+  vanishes in dark mode for dark project colors. `outlets/web/lab/` (served at `:8771/lab.html`) varies
+  the strength, the source color, the surface, the blend, and how dark mode lifts the color, across six
+  real projects. Once one is chosen, move it into `Reader.css` and remove `lab/`, `lab.html`, the `lab`
+  build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency. Lab built 2026-11-16.

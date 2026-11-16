@@ -14,6 +14,15 @@ export default defineConfig({
     ...weasel.resolve,
   },
   ...(weasel.optimizeDeps ? { optimizeDeps: weasel.optimizeDeps } : {}),
-  build: { outDir: 'dist', emptyOutDir: true },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('index.html', import.meta.url)),
+        lab: fileURLToPath(new URL('lab.html', import.meta.url)),
+      },
+    },
+  },
   server: { host: '::', proxy: { '/api': 'http://127.0.0.1:8771' }, ...weasel.server },
 });

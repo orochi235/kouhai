@@ -19,5 +19,5 @@
       "@weasel-js/*": ["../../../weasel/packages/*/dist/index.d.ts"]
     }
   },
-  "include": ["src", "vite.config.ts", "weasel.ts"]
+  "include": ["src", "lab", "vite.config.ts", "weasel.ts"]
 }
