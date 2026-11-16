@@ -17,7 +17,8 @@ export const RULE =
   'question about what to work on next; or one about how something works when answering leads into ' +
   'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
   'in one line what you filed ("Filed q-17, t-18.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
-  'rather than on a line of its own ("…last sentence. (q-17 → inbox)"); if `take` fails or is not among your tools, say so instead. A dixeram call ' +
+  'rather than on a line of its own ("…last sentence. (q-17 → inbox)"), the id a link to the item when `take` ' +
+  'or `settle` gives one; if `take` fails or is not among your tools, say so instead. A dixeram call ' +
   'alone in a step costs an extra request, so pair them: file a question you answer without running ' +
   'anything already answered (`take` with `outcome` and `note`), call `take` beside your first other ' +
   "tool call, and `settle` beside your last when its note doesn't wait on that call.";
@@ -84,17 +85,13 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const since = ctx.session ? store.lastTurnAt(ctx.session) : null;
   const settled = ctx.session && since != null ? store.settledSince(ctx.session, since) : [];
   const turn = store.addTurn(ctx, prompt);
-  const { forced, candidate } = detect(prompt);
+  const { forced } = detect(prompt);
   const broken = missingTake(store, ctx.session, ctx.transcript);
   return {
     ...(broken
       ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }
-      : candidate
-        ? {
-            systemMessage: forced
-              ? 'dixeram ▸ marked with ??, so Claude will file this as a question'
-              : 'dixeram ▸ this prompt might hold a question; Claude will file it if so',
-          }
+      : forced
+        ? { systemMessage: 'dixeram ▸ marked with ??, so Claude will file this as a question' }
         : {}),
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',

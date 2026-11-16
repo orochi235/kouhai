@@ -67,10 +67,10 @@ describe('promptHook', () => {
     expect(second).toMatch(/turn "turn-[0-9a-f]{8}"/);
   });
 
-  it('tells the user when a prompt looks like a question', () => {
+  it('says nothing to the user about a prompt that only looks like a question', () => {
     expect(
       (promptHook(new Store(':memory:'), payload('why is it slow?')) as Out).systemMessage,
-    ).toMatch(/dixeram ▸/);
+    ).toBeUndefined();
   });
 });
 
