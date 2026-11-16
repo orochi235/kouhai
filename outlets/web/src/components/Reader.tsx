@@ -9,6 +9,8 @@ import { Follows } from './Follows.tsx';
 import { MisfileButton, MisfiledNote } from './Misfile.tsx';
 import './Code.css';
 import './Reader.css';
+import { citation } from '../citation.ts';
+import { Copy } from './Copy.tsx';
 import { TagBar } from './Tags.tsx';
 
 type Props = {
@@ -50,23 +52,6 @@ export function resumeCommand(q: Item): string {
   return `${q.cwd ? `cd '${q.cwd.replace(/'/g, "'\\''")}'\n` : ''}${env}claude --resume ${q.session}`;
 }
 
-function Copy({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      className="quiet"
-      onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        setDone(true);
-        setTimeout(() => setDone(false), 1400);
-      }}
-    >
-      {done ? 'Copied' : label}
-    </button>
-  );
-}
-
 export function Reader({
   item: q,
   parent,
@@ -96,7 +81,12 @@ export function Reader({
   return (
     <article className={`reader ${q.repo ? repoClass(q.repo) : ''}`} key={q.ref}>
       <div className="toolbar">
-        <span className="ref">{q.ref}</span>
+        <Copy
+          text={citation([q.ref])}
+          label={q.ref}
+          className="ref"
+          title={`Copy ${citation([q.ref])} to cite this item in a prompt`}
+        />
         <span className="spacer" />
         {q.outcome && (
           <button type="button" className="quiet" onClick={() => onUnread(q)}>

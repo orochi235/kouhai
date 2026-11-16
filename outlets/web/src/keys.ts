@@ -16,6 +16,7 @@ type Inbox = {
   toggleRead: (q: Item) => void;
   pin: (q: Item) => void;
   misfile: () => void;
+  cite: () => void;
   box: (kind: Kind) => void;
 };
 
@@ -30,6 +31,7 @@ export function useInboxKeys({
   toggleRead,
   pin,
   misfile,
+  cite,
   box,
 }: Inbox) {
   const group = 'Inbox';
@@ -74,6 +76,11 @@ export function useInboxKeys({
   useCommand('item.pin', 'Pin or unpin', () => current && pin(current), {
     group: item,
     keys: key('p'),
+    enabled: needs(current),
+  });
+  useCommand('item.cite', 'Copy citation', cite, {
+    group: item,
+    keys: key('c'),
     enabled: needs(current),
   });
   useCommand('item.misfile', 'Mark misfiled', misfile, {

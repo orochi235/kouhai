@@ -1,5 +1,7 @@
 import { flipLabel, type Toggle } from '../actions.ts';
 import type { Item } from '../api.ts';
+import { citation } from '../citation.ts';
+import { Copy } from './Copy.tsx';
 import './Bulk.css';
 
 type Props = {
@@ -23,6 +25,7 @@ export function Bulk({ items, lead, onFlip, onClear }: Props) {
             {flipLabel(path, lead)}
           </button>
         ))}
+        <Copy text={citation(items.map((q) => q.ref))} label="Copy citations" />
         <button type="button" className="quiet" onClick={onClear}>
           Clear selection <kbd>Esc</kbd>
         </button>

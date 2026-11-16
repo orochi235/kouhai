@@ -16,6 +16,7 @@ import {
 } from './api.ts';
 import './App.css';
 import { useActions } from './actions.ts';
+import { citation } from './citation.ts';
 import { Bulk } from './components/Bulk.tsx';
 import { MessageList } from './components/MessageList.tsx';
 import { Panes } from './components/Panes.tsx';
@@ -178,6 +179,7 @@ function Inbox() {
     toggleRead: (q) => flip('read', targets, q),
     pin: (q) => flip('pin', targets, q),
     misfile: () => setAskMisfile((n) => n + 1),
+    cite: () => void navigator.clipboard.writeText(citation(targets.map((q) => q.ref))),
     box,
   });
 

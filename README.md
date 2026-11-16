@@ -43,7 +43,7 @@ The prompt hook brings in that item's question and answer, up to ten per prompt 
 tool; an id inside a longer token, such as `faq-17`, is never matched.
 
 On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,
-`m` misfiled, `/` search; click, Cmd-click, and Shift-click select rows, Shift+`j`/`k` extend the
+`m` misfiled, `c` copies the item's citation (`[q-17]`, or every selected item's), `/` search; click, Cmd-click, and Shift-click select rows, Shift+`j`/`k` extend the
 selection, Mod+A selects every row and Esc clears it, and `x`, `u`, and `p` act on the whole selection; Mod+Z and Shift+Mod+Z undo and redo any of those (and tag edits and Mark all read);
 Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
 and whether opening an item marks it read). The columns are windease panes: drag a seam to resize.

@@ -243,11 +243,10 @@
 
 .kind {
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  min-width: 4ch;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  min-width: 6ch;
 }
 
 .kind.kind-task {
