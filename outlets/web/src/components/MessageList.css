@@ -161,13 +161,13 @@
   overflow: hidden;
 }
 
-.q code,
 .a .done {
   color: var(--done);
   vertical-align: -2px;
   margin-inline-end: 4px;
 }
 
+.q code,
 .a code {
   font-family: var(--mono);
   font-size: 0.85em;

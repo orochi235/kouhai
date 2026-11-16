@@ -1,5 +1,7 @@
+import { ColorModeControl } from '@weasel-js/ui/components/ColorModeControl';
 import type { Filter, Kind, Listing, Repo, Tag, TagEdit } from '../api.ts';
 import { repoClass } from '../repoColors.ts';
+import { useSchemeChoice } from '../scheme.ts';
 import './Sidebar.css';
 import { TagRail } from './Tags.tsx';
 
@@ -53,6 +55,7 @@ export function Sidebar({
   onShortcuts,
   onPreferences,
 }: Props) {
+  const scheme = useSchemeChoice();
   return (
     <nav className="sidebar">
       <header className="masthead">
@@ -125,6 +128,10 @@ export function Sidebar({
           <button type="button" className="quiet" onClick={onPreferences}>
             Preferences
           </button>
+        </p>
+        <p className="keys">
+          {/* A debugging aid: flips the page between schemes without changing the system's. */}
+          <ColorModeControl size="sm" value={scheme.preference} onChange={scheme.setPreference} />
         </p>
         {offline && <p className="offline">The daemon is not answering on :8771</p>}
       </footer>
