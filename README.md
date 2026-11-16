@@ -37,6 +37,9 @@ Each stage says what it did in the transcript: the hooks print a `dixeram ▸` l
 what it filed, and Claude ends an answer in chat with `[q-17]`, linked to the item while the ledger UI runs. `owed` lets Claude list
 its own open items after a long stretch of work or a compaction.
 
+To point Claude at an item, cite it in brackets in a prompt: `[q-17]`, or the `[[q-17](…)]` an answer ends with.
+The prompt hook brings in that item's question and answer, up to five items per prompt. A bare `q-17` brings in nothing.
+
 On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `x` or delete archive, `u` toggle unread, `p` pin,
 `m` misfiled, `/` search; click, Cmd-click, and Shift-click select rows, Shift+`j`/`k` extend the
 selection, Mod+A selects every row and Esc clears it, and `x`, `u`, and `p` act on the whole selection; Mod+Z and Shift+Mod+Z undo and redo any of those (and tag edits and Mark all read);

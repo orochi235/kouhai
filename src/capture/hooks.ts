@@ -3,6 +3,7 @@ import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
 import { dixeramTools, filedRefs, unledgeredMidTurn } from '../engine/transcript.ts';
 import type { Item } from '../engine/types.ts';
+import { citations } from './cite.ts';
 
 export type Payload = Record<string, unknown>;
 export type HookOutput = Record<string, unknown> | null;
@@ -87,6 +88,7 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const turn = store.addTurn(ctx, prompt);
   const { forced } = detect(prompt);
   const broken = missingTake(store, ctx.session, ctx.transcript);
+  const cited = citations(store, prompt);
   return {
     ...(broken
       ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }
@@ -104,7 +106,8 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
         (broken
           ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect dixeram fixes it.`
           : '') +
-        (settled.length ? ` ${lastTurnRule(settled)}` : ''),
+        (settled.length ? ` ${lastTurnRule(settled)}` : '') +
+        (cited ? `\n\n${cited}` : ''),
     },
   };
 }

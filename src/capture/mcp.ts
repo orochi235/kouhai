@@ -181,7 +181,16 @@ let uiSeen: { up: boolean; at: number } | null = null;
 /** Whether the ledger's web UI answers, so a marker can link to it; checked at most every 30 s. */
 function uiUp(): boolean {
   if (uiSeen && Date.now() - uiSeen.at < 30_000) return uiSeen.up;
-  const r = spawnSync('curl', ['-s', '-o', '/dev/null', '-m', '0.3', '-w', '%{http_code}', `${apiBase()}/`]);
+  const r = spawnSync('curl', [
+    '-s',
+    '-o',
+    '/dev/null',
+    '-m',
+    '0.3',
+    '-w',
+    '%{http_code}',
+    `${apiBase()}/`,
+  ]);
   uiSeen = { up: r.status === 0 && String(r.stdout).startsWith('2'), at: Date.now() };
   return uiSeen.up;
 }
@@ -228,7 +237,12 @@ export function callTool(
       `Filed in the dixeram ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
         'Tell the user in one line what you filed' +
         (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
-        (lines.some((l) => l.question) ? `; ${markerRule(filed.filter((i) => i.kind === 'question').map((i) => i.ref), link)}` : '') +
+        (lines.some((l) => l.question)
+          ? `; ${markerRule(
+              filed.filter((i) => i.kind === 'question').map((i) => i.ref),
+              link,
+            )}`
+          : '') +
         '.',
     );
   }

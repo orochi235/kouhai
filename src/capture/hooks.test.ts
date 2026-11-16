@@ -53,6 +53,14 @@ describe('promptHook', () => {
     expect(out.systemMessage).toBeUndefined();
   });
 
+  it('brings in an item the prompt cites in brackets', () => {
+    const s = new Store(':memory:');
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx('s0'));
+    s.settle('q-1', 'answered', 'because');
+    const out = promptHook(s, payload('more on [q-1]')) as Out;
+    expect(out.hookSpecificOutput?.additionalContext).toContain('Answer: because');
+  });
+
   it("gives the whole rule on a session's first prompt and a short reminder after", () => {
     let t = 1000;
     const s = new Store(':memory:', () => t);
