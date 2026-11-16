@@ -11,24 +11,16 @@ const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…
 
 /** The filing rule, the same on every prompt and in the MCP server's instructions. */
 export const RULE =
-  'File with the dixeram `take` tool: (1) every direct question the user asks you, kind "question"; ' +
-  '(2) any instruction you will not finish before this turn ends, kind "task" (one queued behind ' +
-  'other work, one meant for later, or one that arrives mid-turn while you are busy). An instruction ' +
-  'you carry out in this turn needs no filing, and neither does an instruction to build something that ' +
-  'you start this turn, yourself or through an agent. Two kinds of question are not filed either: one asking what to work on next ("anything on the TODO list?", "anything to pick up?"), which is session logistics; and one about how an implementation detail works, when answering it leads into work in the same turn. A filed item stays owed until it is settled: a question ' +
-  'as answered, a task as done, either as dropped (with why), or as deferred, which means moved to ' +
-  'another durable home such as a TODO entry or an issue (say where). Work still waiting on a later ' +
-  'turn is owed, not deferred: leave it open. Only once `take` has returned ids, say in one line what ' +
-  'you filed ("Filed q-17, t-18."), and end an answer in chat with its id ("(q-17 → inbox)"); never ' +
-  'announce a filing before it is accepted, and if `take` fails, say it failed rather than naming an ' +
-  'id. If the `take` tool is not among your tools, say so to the user rather than skipping the filing. ' +
-  'A dixeram call alone in a step costs a whole extra request, so pair them: a question you answer ' +
-  'without running anything first is filed already answered (give `take` its `outcome` and `note`); ' +
-  'otherwise call `take` in the same step as your first other tool call, and `settle` beside your last ' +
-  "one whenever its note does not wait on that call's result. Notes are read later, away from this " +
-  'conversation, so make them stand on their own and link generously: every file you name as a ' +
-  'markdown link to its absolute path ([src/store.ts:42](/abs/path/src/store.ts)), and commits, PRs, ' +
-  'issues, docs, and artifacts by URL.';
+  'File with dixeram\'s `take`: every direct question the user asks (kind "question"), and every ' +
+  'instruction you won\'t finish this turn (kind "task": queued, for later, or arriving mid-turn). ' +
+  "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
+  'question about what to work on next; or one about how something works when answering leads into ' +
+  'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
+  'in one line what you filed ("Filed q-17, t-18.") and end an answer in chat with its id ' +
+  '("(q-17 → inbox)"); if `take` fails or is not among your tools, say so instead. A dixeram call ' +
+  'alone in a step costs an extra request, so pair them: file a question you answer without running ' +
+  'anything already answered (`take` with `outcome` and `note`), call `take` beside your first other ' +
+  "tool call, and `settle` beside your last when its note doesn't wait on that call.";
 
 /**
  * Every prompt after a session's first. Each injection stays in context and is re-read by every

@@ -18,23 +18,19 @@ import { RULE } from './hooks.ts';
 const VERSION = '0.4.0';
 
 const INSTRUCTIONS =
-  "dixeram is a ledger of what you owe the user: their direct questions, and instructions you haven't " +
-  'carried out yet. They read it later, so nothing asked mid-task gets lost. Answer in chat as usual too. ' +
-  RULE;
+  'dixeram is the ledger of what you owe the user, read later away from this chat; answer in chat ' +
+  `as usual too. ${RULE}`;
 
 const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 
 /** The instructions, plus what the user marked as filed by mistake, so sessions learn from it. */
 export function instructions(store: Store): string {
-  const misfiled = store.misfiles();
+  const misfiled = store.misfiles(5);
   if (!misfiled.length) return INSTRUCTIONS;
   const list = misfiled
-    .map(
-      (i) =>
-        `${i.kind} "${clip(i.text, 90)}"${i.misfiledWhy ? ` (${clip(i.misfiledWhy, 120)})` : ''}`,
-    )
+    .map((i) => `"${clip(i.text, 60)}"${i.misfiledWhy ? ` (${clip(i.misfiledWhy, 80)})` : ''}`)
     .join('; ');
-  return `${INSTRUCTIONS} The user marked these as filed by mistake, with their reason where they gave one; don't file items like them: ${list}.`;
+  return `${INSTRUCTIONS} The user marked these filed by mistake; don't file their like: ${list}.`;
 }
 
 const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
@@ -56,12 +52,9 @@ const TOOLS = [
   {
     name: 'take',
     description:
-      'File items you now owe the user. A "question" is anything they asked you directly. A "task" is ' +
-      'an instruction you will not finish before this turn ends; one you carry out now needs no filing. ' +
-      'Quote or tightly paraphrase their words. Pass the `turn` id from the dixeram hook when one was ' +
-      'given. An item you can settle already (a question you answer without running anything first) ' +
-      'takes its `outcome` and `note` here, written as `settle` describes, which saves a separate ' +
-      '`settle` call. Returns ids like q-17 and t-18.',
+      "File what you owe, quoting or tightly paraphrasing the user. Pass the hook's `turn` id. An " +
+      'item you can settle now takes its `outcome` and `note` here instead of a separate `settle`. ' +
+      'Returns ids like q-17 and t-18.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -81,10 +74,9 @@ const TOOLS = [
               outcome: {
                 type: 'string',
                 enum: ALL_OUTCOMES,
-                description: 'To file it already settled; give `note` too.',
+                description: 'To file it already settled, with `note`.',
               },
-              note: { type: 'string', description: 'The settling note, as for `settle`.' },
-              attachments: ATTACHMENTS,
+              note: { type: 'string', description: 'As for `settle`.' },
             },
             required: ['kind', 'text'],
           },
@@ -97,11 +89,14 @@ const TOOLS = [
   {
     name: 'settle',
     description:
-      'Settle an item. A question settles as answered, a task as done; either can be dropped or ' +
-      'deferred (moved to another durable home: a TODO entry, an issue; say where). Work still waiting on a later turn is not deferred: leave it owed. The note is markdown, linked generously (files as markdown links to absolute paths; commits, PRs, issues, docs, and artifacts by URL), read away from this conversation: for an answer, lead with the ' +
-      'answer and give the context needed; for a task, what was done (commits, files); for dropped or ' +
-      'deferred, why, and where it went. A line saying work landed in a commit starts with ✅ and links the commit to its GitHub page (`https://github.com/<owner>/<repo>/commit/<sha>`, from `git remote get-url origin`); with no GitHub remote, give the short sha in backticks. Settling again replaces the note, keeps attachments, and marks ' +
-      'it unread. Attach richer material (a claude.ai artifact URL, a file, a link) with `attachments`.',
+      'Settle an item: a question as answered, a task as done, either as dropped (say why) or deferred ' +
+      '(moved to a durable home such as a TODO entry or an issue; say where). Work waiting on a later ' +
+      'turn stays owed. The note is markdown read away from this chat, so it stands on its own: an ' +
+      'answer leads with the answer; a task says what was done. Link files as markdown links to ' +
+      'absolute paths, and commits, PRs, issues, docs, and artifacts by URL. A line saying work landed ' +
+      'in a commit starts with ✅ and links it (`https://github.com/<owner>/<repo>/commit/<sha>`, from ' +
+      '`git remote get-url origin`; else the short sha in backticks). Settling again replaces the ' +
+      'note and marks it unread. `attachments` adds an artifact URL, a file, or a link.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -116,9 +111,7 @@ const TOOLS = [
   {
     name: 'clear',
     description:
-      'Take an answered question out of the inbox because the user has already seen it, only as the ' +
-      'dixeram hook describes: the next prompt responds to the answer, and the answer will not ' +
-      'outlive this session.',
+      'Clear an answered question from the inbox as seen, only when the dixeram hook says to.',
     inputSchema: {
       type: 'object',
       properties: { id: { type: 'string', description: 'The item id, e.g. q-17.' } },
@@ -128,8 +121,7 @@ const TOOLS = [
   {
     name: 'owed',
     description:
-      'List what this session still owes the user. Use it after a long stretch of work or a ' +
-      'compaction, before telling the user you are finished.',
+      "List what this session still owes; use it after long work or a compaction, before saying you're done.",
     inputSchema: {
       type: 'object',
       properties: { turn: { type: 'string', description: 'Any turn id from this session.' } },

@@ -41,7 +41,7 @@ On the page: `j`/`k` move, `1`/`2` Questions/Tasks, `e` archive, `u` toggle unre
 `m` misfiled, `/` search; Shift+/ lists every key, and Mod+, opens preferences (the inbox it opens on,
 and whether opening an item marks it read). The columns are windease panes: drag a seam to resize.
 **Misfiled** marks an item that should never have been filed, with an optional reason, and
-archives it; the ten latest go into the MCP server's instructions as examples of what not to
+archives it; the five latest go into the MCP server's instructions as examples of what not to
 file, so a new session learns from them (`dixeram misfile <id> [why]` does the same).
 **Tags** are your own labels: add one from an item's reader (a new name defines it), filter by it
 from the sidebar, and rename, recolor, or delete it there. Claude never sets them. Opening a settled

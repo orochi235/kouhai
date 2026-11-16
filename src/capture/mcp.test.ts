@@ -145,6 +145,6 @@ describe('instructions', () => {
     expect(plain).not.toContain('by mistake');
     s.take([{ kind: 'task', text: 'rename the var' }], null, fb);
     s.setMisfiled('t-1', true, 'did it the same turn');
-    expect(instructions(s)).toContain('task "rename the var" (did it the same turn)');
+    expect(instructions(s)).toContain('"rename the var" (did it the same turn)');
   });
 });
