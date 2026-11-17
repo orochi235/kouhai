@@ -19,11 +19,6 @@
   (served at `:8771/lab.html`) is kept while it is still being tuned; removing it means `lab/`,
   `lab.html`, the `lab` build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency.
 
-- **Copy transom images a note links to, not only its attachments.** `keep` in
-  `src/engine/enclosures.ts` copies an attached transom file or wall URL into `~/.dixeram/enclosures/`,
-  but a note's markdown image pointing into `~/transom` or at `localhost:8787/to/…` still breaks
-  once the wall clears it. Found 2026-11-17, when two older items' attached shots were already gone.
-
 - **Rename away from a name that reads as "dicks".** Favorite so far: *kouhai* (the junior who keeps
   track for the senior); runners-up *slate* and *chit*. Left for later (2026-11-16). The rename
   touches the plugin and marketplace names, the `dev.dixeram` launchd label, `DIXERAM_HOME` and

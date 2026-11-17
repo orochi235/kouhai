@@ -1,6 +1,6 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it, vi } from 'vitest';
 import { ARCHIVE_TTL_MS, TURN_TTL_MS } from './paths.ts';
@@ -119,6 +119,27 @@ describe('Store', () => {
       tick(ARCHIVE_TTL_MS + 1);
       s.prune();
       expect(existsSync(a?.ref ?? '')).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('points a note at its own copies of transom images', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
+    vi.stubEnv('DIXERAM_HOME', join(dir, 'home'));
+    vi.stubEnv('HOME', dir);
+    try {
+      const shot = join(dir, 'transom', 'inbox', 'r', 'a.png');
+      mkdirSync(dirname(shot), { recursive: true });
+      writeFileSync(shot, 'png');
+      const { s } = store();
+      s.take([q('does it render?')], null, ctx);
+      const note = `![one](${shot}) and [two](http://localhost:8787/to/r/a.png), [gone](http://localhost:8787/to/r/b.png). On the wall at http://localhost:8787/to/r/a.png. \`${shot}\``;
+      const kept = join(dir, 'home', 'enclosures', '1', 'a.png');
+      expect(s.settle('q-1', 'answered', note)?.note).toBe(
+        `![one](${kept}) and [two](${kept}), [gone](http://localhost:8787/to/r/b.png). On the wall at [a.png](${kept}). \`${shot}\``,
+      );
     } finally {
       vi.unstubAllEnvs();
       rmSync(dir, { recursive: true, force: true });

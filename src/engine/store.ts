@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { dropEnclosures, keep } from './enclosures.ts';
+import { dropEnclosures, keep, keepNote } from './enclosures.ts';
 import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
 import { slugOf, slugRef } from './slug.ts';
 import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
@@ -315,7 +315,7 @@ export class Store {
       .prepare(
         'UPDATE items SET outcome = ?, note = ?, attachments = ?, settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?',
       )
-      .run(outcome, note, JSON.stringify(merged), at, at, item.id);
+      .run(outcome, keepNote(item.id, note), JSON.stringify(merged), at, at, item.id);
     return this.get(item.id);
   }
 
