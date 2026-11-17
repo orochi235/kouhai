@@ -1,5 +1,6 @@
 import { type ConfigOf, defineInstrument, f } from '@weasel-js/labkit';
 import { useThemeOptional } from '@weasel-js/theme/react';
+import { useId } from 'react';
 import type { Item } from '../src/api.ts';
 import { Reader } from '../src/components/Reader.tsx';
 import { inkFor, repoClass } from '../src/repoColors.ts';
@@ -52,11 +53,11 @@ const item = (repo: string): Item => ({
   tags: [],
 });
 
-/** The candidate tint as a stylesheet, scoped to the lab's cells; the winner moves into Reader.css. */
-function sheet(c: Config, dark: boolean): string {
+/** The candidate tint as a stylesheet, scoped to one trial's cells; the winner moves into Reader.css. */
+function sheet(c: Config, dark: boolean, scope: string): string {
   const colors = SAMPLES.map((s) => {
     const raw = s[c.source] || s.background;
-    return `.tint-lab .${repoClass(s.repo)}{--chip-bg:${s.background};--chip-fg:${s.foreground || inkFor(s.background)};--tint-raw:${raw}}`;
+    return `${scope} .${repoClass(s.repo)}{--chip-bg:${s.background};--chip-fg:${s.foreground || inkFor(s.background)};--tint-raw:${raw}}`;
   });
   const pct = dark ? c.darkStrength : c.strength;
   const color =
@@ -77,9 +78,9 @@ function sheet(c: Config, dark: boolean): string {
         : '.reader';
   const rule =
     c.surface === 'edge'
-      ? `.tint-lab .cell .reader{box-shadow: inset 4px 0 0 ${color};}`
-      : `.tint-lab .cell ${target}{${fill}}`;
-  return [...colors, '.tint-lab .cell .reader{background:none}', rule].join('\n');
+      ? `${scope} .cell .reader{box-shadow: inset 4px 0 0 ${color};}`
+      : `${scope} .cell ${target}{${fill}}`;
+  return [...colors, `${scope} .cell .reader{background:none}`, rule].join('\n');
 }
 
 const noop = () => {};
@@ -87,9 +88,10 @@ const noop = () => {};
 /** The six readers, in the scheme labkit's View → Theme puts the lab in. */
 function Cells({ config }: { config: Config }) {
   const scheme = useThemeOptional()?.selection.mode === 'light' ? 'light' : 'dark';
+  const id = useId();
   return (
-    <div className="tint-lab" data-scheme={scheme}>
-      <style>{sheet(config, scheme === 'dark')}</style>
+    <div className="tint-lab" data-scheme={scheme} data-tint={id}>
+      <style>{sheet(config, scheme === 'dark', `.tint-lab[data-tint="${id}"]`)}</style>
       {SAMPLES.map((s) => (
         <figure key={s.repo} className="cell">
           <div className="frame">
