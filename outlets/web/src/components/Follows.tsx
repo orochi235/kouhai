@@ -1,3 +1,4 @@
+import { nameOf } from '@core/slug.ts';
 import type { Item } from '../api.ts';
 import { renderPreview } from '../markdown.ts';
 import './Follows.css';
@@ -14,7 +15,7 @@ export function Follows({
 }) {
   return (
     <button type="button" className="follows" onClick={() => onSelect(of)}>
-      Follows up on {of}
+      Follows up on {parent ? nameOf(parent) : of}
       {parent && (
         <>
           : <span dangerouslySetInnerHTML={{ __html: renderPreview(parent.text) }} />

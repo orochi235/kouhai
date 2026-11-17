@@ -10,6 +10,7 @@ import {
 } from './capture/hooks.ts';
 import { respond, serve } from './capture/mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
+import { nameOf } from './engine/slug.ts';
 import { idOf, Store } from './engine/store.ts';
 import { FILTERS, type Filter, type Item, KINDS, type Kind } from './engine/types.ts';
 import { runDaemon } from './server/server.ts';
@@ -112,7 +113,7 @@ async function main(argv: string[]) {
       const q = rest[0] ? new Store().get(rest[0]) : null;
       if (!q) throw new Error(`no item ${rest[0] ?? ''}`);
       console.log(
-        `${q.ref} · ${q.repo ?? '-'} · ${q.harness ?? '-'} · ${q.kind} raised ${ago(q.raisedAt)} ago · ${q.outcome ?? 'owed'}\n`,
+        `${nameOf(q)} · ${q.repo ?? '-'} · ${q.harness ?? '-'} · ${q.kind} raised ${ago(q.raisedAt)} ago · ${q.outcome ?? 'owed'}\n`,
       );
       console.log(`> ${q.text}\n`);
       console.log(q.note ?? '(still owed)');
@@ -131,7 +132,7 @@ async function main(argv: string[]) {
       if (!ref) return console.error('usage: dixeram misfile <id> [why]');
       const q = new Store().setMisfiled(ref, !undo, why.join(' ') || null);
       if (!q) return console.error(`no item ${ref}`);
-      console.log(undo ? `${q.ref} restored` : `${q.ref} marked misfiled and archived`);
+      console.log(undo ? `${nameOf(q)} restored` : `${nameOf(q)} marked misfiled and archived`);
       return;
     }
     case 'tag': {
@@ -142,7 +143,7 @@ async function main(argv: string[]) {
       const q = store.get(ref);
       if (!q) return console.error(`no item ${ref}`);
       store.tags.set(q.id, name.join(' '), !undo);
-      console.log(`${q.ref}: ${store.get(q.id)?.tags.join(', ') || 'no tags'}`);
+      console.log(`${nameOf(q)}: ${store.get(q.id)?.tags.join(', ') || 'no tags'}`);
       return;
     }
     case 'tags': {

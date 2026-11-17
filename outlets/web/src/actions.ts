@@ -1,3 +1,4 @@
+import { nameOf } from '@core/slug.ts';
 import { useCallback, useMemo } from 'react';
 import { api, type Item, type Tag, type TagEdit } from './api.ts';
 import type { Step } from './undo.ts';
@@ -23,7 +24,7 @@ export function useActions(record: (step: Step) => void, load: () => void, tags:
       const send = (q: Item, v: boolean) => api.post(path, { id: q.ref, [key]: v });
       const run = () => Promise.all(qs.map((q) => send(q, on)));
       if (!undoable) return void run().then(load, load);
-      const what = qs.length === 1 ? qs[0]?.ref : `${qs.length} items`;
+      const what = qs.length === 1 && qs[0] ? nameOf(qs[0]) : `${qs.length} items`;
       record({
         label: `${label[on ? 0 : 1]} ${what}`,
         run,
@@ -44,7 +45,7 @@ export function useActions(record: (step: Step) => void, load: () => void, tags:
       const fresh = on && !tags.some((x) => x.name.toLowerCase() === t.toLowerCase());
       const send = (v: boolean) => () => api.post('tag', { id: q.ref, tag: t, on: v });
       record({
-        label: `${on ? 'Tag' : 'Untag'} ${q.ref} ${t}`,
+        label: `${on ? 'Tag' : 'Untag'} ${nameOf(q)} ${t}`,
         run: send(on),
         // Taking off a tag this step made also deletes it, so undo leaves no empty tag behind.
         back: fresh
@@ -89,7 +90,7 @@ export function useActions(record: (step: Step) => void, load: () => void, tags:
       const send = (m: boolean, w: string | null) => () =>
         api.post('misfile', { id: q.ref, misfiled: m, why: w });
       record({
-        label: `${misfiled ? 'Mark' : 'Unmark'} ${q.ref} misfiled`,
+        label: `${misfiled ? 'Mark' : 'Unmark'} ${nameOf(q)} misfiled`,
         run: send(misfiled, why),
         back: send(!misfiled, q.misfiledWhy),
       });
