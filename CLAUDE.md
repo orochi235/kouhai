@@ -11,7 +11,9 @@
 - **Deployed from this checkout.** The plugin is only a shell: its hooks and MCP server run
   `dixeram` from `~/.local/bin`, a link to `bin/dixeram` here, so a change to `src/` reaches
   hooks and new sessions at once. The daemon needs a restart:
-  `launchctl kickstart -k gui/$(id -u)/dev.dixeram`. The page needs `npm run build`.
+  `launchctl kickstart -k gui/$(id -u)/dev.dixeram`. The page needs `npm run build:fleet`: it
+  builds weasel and the page on the fleet and swaps `dist/` in whole, because onto's fetch never
+  deletes and an `--out` straight into `dist/` leaves every old bundle behind.
 - **The page builds against the weasel checkout at `../weasel`** (`WEASEL=<checkout>`, `outlets/web/weasel.ts`,
   and `@weasel-js/*` in `outlets/web/tsconfig.json`), because its shortcut sheet is in no weasel release yet
   (2026-11-15). The pins stay on the published version. The page also imports `IconRegistryProvider` from
