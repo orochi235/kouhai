@@ -1,14 +1,11 @@
 import { nameOf } from '@core/slug.ts';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Attachment, Item, Outcome, Tag } from '../api.ts';
-import { drawDiagrams } from '../diagrams.ts';
-import { imageUrl, isImagePath } from '../images.ts';
-import { render } from '../markdown.ts';
+import type { Item, Outcome, Tag } from '../api.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
+import { Answer } from './Answer.tsx';
+import { Enclosures } from './Enclosures.tsx';
 import { Follows } from './Follows.tsx';
 import { MisfileButton, MisfiledNote } from './Misfile.tsx';
-import './Code.css';
 import './Reader.css';
 import { citation } from '../citation.ts';
 import { Copy } from './Copy.tsx';
@@ -40,13 +37,6 @@ const STAMP: Record<Outcome, string> = {
   deferred: 'Deferred',
 };
 
-const KIND: Record<Attachment['kind'], string> = {
-  artifact: 'Artifact',
-  url: 'Link',
-  file: 'File',
-  transom: 'On the wall',
-};
-
 /** A shell that reopens the session, each step on its own line, in the harness it ran under. */
 export function resumeCommand(q: Item): string {
   const env = q.harness && q.harness !== 'claude' ? `CLAUDE_CONFIG_DIR=~/.${q.harness} ` : '';
@@ -67,11 +57,6 @@ export function Reader({
   onMisfile,
   askMisfile,
 }: Props) {
-  const html = useMemo(() => (q?.note ? render(q.note, q.ref) : ''), [q?.note, q?.ref]);
-  const answer = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (html && answer.current) drawDiagrams(answer.current);
-  }, [html]);
   if (!q) {
     return (
       <article className="reader blank">
@@ -82,6 +67,7 @@ export function Reader({
   return (
     <article className={`reader ${q.repo ? repoClass(q.repo) : ''}`} key={q.ref}>
       <div className="toolbar">
+        {q.repo && <span className={`chip project ${repoClass(q.repo)}`}>{q.repo}</span>}
         <Copy
           text={citation([q.ref])}
           label={nameOf(q)}
@@ -113,14 +99,6 @@ export function Reader({
           </div>
           <h2 className="headline">{q.text}</h2>
           <dl className="postmark-block">
-            {q.repo && (
-              <div>
-                <dt>repo</dt>
-                <dd>
-                  <span className={`chip ${repoClass(q.repo)}`}>{q.repo}</span>
-                </dd>
-              </div>
-            )}
             {q.harness && (
               <div>
                 <dt>harness</dt>
@@ -147,60 +125,9 @@ export function Reader({
           <TagBar item={q} tags={tags} onTag={onTag} />
         </header>
 
-        {q.note ? (
-          <div
-            ref={answer}
-            className="answer"
-            onClick={(e) => {
-              const a = (e.target as HTMLElement).closest('a');
-              const href = a?.getAttribute('href') ?? '';
-              const ref = a?.dataset.ref;
-              if (ref) {
-                if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-                e.preventDefault();
-                onSelect(ref);
-              } else if (href.startsWith('/') || href.startsWith('file://')) {
-                e.preventDefault();
-                onOpenPath(q, href);
-              }
-            }}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        ) : (
-          <p className="answer pending">
-            {q.kind === 'task'
-              ? "Still owed. Claude took this on and hasn't settled it."
-              : "Claude has this question and hasn't answered it yet."}
-          </p>
-        )}
+        <Answer item={q} onSelect={onSelect} onOpenPath={onOpenPath} />
 
-        {q.attachments.length > 0 && (
-          <section className="enclosures">
-            <h3>Enclosed</h3>
-            <ul>
-              {q.attachments.map((a) => (
-                <li key={`${a.kind}:${a.ref}`}>
-                  <span className="kind">{KIND[a.kind]}</span>
-                  {a.kind === 'artifact' || a.kind === 'url' ? (
-                    <a href={a.ref} target="_blank" rel="noreferrer">
-                      {a.label ?? a.ref}
-                    </a>
-                  ) : (
-                    <>
-                      <span className="path">{a.label ?? a.ref}</span>
-                      <button type="button" className="quiet" onClick={() => onReveal(q, a.ref)}>
-                        Show in Finder
-                      </button>
-                      {isImagePath(a.ref) && (
-                        <img className="shot" src={imageUrl(q.ref, a.ref)} alt={a.label ?? ''} />
-                      )}
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <Enclosures item={q} onReveal={onReveal} />
 
         {q.prompt && q.prompt.trim() !== q.text.trim() && (
           <details className="prompt">
