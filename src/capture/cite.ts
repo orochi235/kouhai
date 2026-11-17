@@ -1,5 +1,5 @@
 import { ownWords } from '../engine/detect.ts';
-import { nameOf, SLUG } from '../engine/slug.ts';
+import { nameOf, REF, SLUG } from '../engine/slug.ts';
 import type { Store } from '../engine/store.ts';
 import type { Item } from '../engine/types.ts';
 
@@ -9,8 +9,6 @@ const NOTE_CAP = 6000;
 
 /** `[q-17]`, or the `[[q-17](link)]` an answer ends with; `#slug` is cited too. */
 const CITED = /\[\[?([qt]-\d+)\]/gi;
-/** `q-17` standing alone, not part of a longer token such as `faq-17` or `q-17b`. */
-const BARE = /(?<![\w-])([qt]-\d+)(?![\w-])/gi;
 
 const unique = (refs: string[]) => [...new Set(refs.map((r) => r.toLowerCase()))];
 
@@ -25,7 +23,7 @@ export function refsIn(prompt: string): { cited: string[]; mentioned: string[] }
     ...[...own.matchAll(CITED)].map((m) => m[1] as string),
     ...[...own.matchAll(SLUG)].map((m) => `#${m[1]}`),
   ]);
-  const mentioned = unique([...own.matchAll(BARE)].map((m) => m[1] as string)).filter(
+  const mentioned = unique([...own.matchAll(REF)].map((m) => m[1] as string)).filter(
     (r) => !cited.includes(r),
   );
   return { cited, mentioned };

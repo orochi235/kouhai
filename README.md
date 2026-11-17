@@ -52,7 +52,8 @@ archives it; the five latest go into the MCP server's instructions as examples o
 file, so a new session learns from them (`dixeram misfile <id> [why]` does the same).
 **Tags** are your own labels: add one from an item's reader (a new name defines it), filter by it
 from the sidebar, and rename, recolor, or delete it there. Claude never sets them. Opening a settled
-item marks it read. `?q=q-17` opens one directly. Notes render as GitHub-flavored markdown: a code
+item marks it read; under Unread it stays listed until you move off it. `?q=q-17` opens one directly.
+An item a note names (`q-17`, `#cost-of-slugs`) is a link that opens it. Notes render as GitHub-flavored markdown: a code
 block that names its language is highlighted (highlight.js), and a ```` ```mermaid ```` block draws its diagram. A file a note links to opens when clicked; the
 daemon opens only absolute paths that note itself links. An attached image, and a local image the
 note shows with `![](/abs/path.png)`, appear inline. A claude.ai artifact stays a link, since

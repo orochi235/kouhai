@@ -3,6 +3,7 @@ import hljs from 'highlight.js/lib/common';
 import { Marked, marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import { localImages } from './images.ts';
+import { itemRefs } from './itemRefs.ts';
 
 // A block names its language to be highlighted; an unnamed one stays plain, since guessing colors
 // prose and tables wrongly. Mermaid blocks are left for `drawDiagrams`.
@@ -13,10 +14,11 @@ const highlight = markedHighlight({
       ? hljs.highlight(code, { language: lang }).value
       : code,
 });
-const plain = new Marked(highlight);
+
+const plain = new Marked(highlight, itemRefs);
 
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A') {
+  if (node.tagName === 'A' && !node.hasAttribute('data-ref')) {
     node.setAttribute('target', '_blank');
     node.setAttribute('rel', 'noreferrer');
   }
@@ -26,7 +28,7 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
 export const render = (md: string, ref?: string) =>
   DOMPurify.sanitize(
     // A per-call `walkTokens` would replace the highlighter's, so the image hook joins it in its own instance.
-    (ref ? new Marked(highlight, { walkTokens: localImages(ref) }) : plain).parse(md, {
+    (ref ? new Marked(highlight, itemRefs, { walkTokens: localImages(ref) }) : plain).parse(md, {
       async: false,
       gfm: true,
     }),

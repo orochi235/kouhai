@@ -86,7 +86,14 @@ function Inbox() {
     [load],
   );
 
-  const rows = useMemo(() => thread(listing?.items ?? []), [listing]);
+  // Opening an item under Unread reads it; it stays listed, where it stood, until the cursor leaves it.
+  const [held, setHeld] = useState<{ item: Item; at: number } | null>(null);
+  const listed = useMemo(() => {
+    const l = listing?.items ?? [];
+    if (!held || l.some((q) => q.ref === held.item.ref)) return l;
+    return [...l.slice(0, held.at), held.item, ...l.slice(held.at)];
+  }, [listing, held]);
+  const rows = useMemo(() => thread(listed), [listed]);
   const items = useMemo(() => rows.map((r) => r.item), [rows]);
   const order = useMemo(() => items.map((q) => q.ref), [items]);
   const {
@@ -129,8 +136,17 @@ function Inbox() {
     const key = `${current.ref}:${current.settledAt}`;
     if (key === autoRead.current) return;
     autoRead.current = key;
-    if (!current.readAt) act('read', [current], true, false);
-  }, [current, act, readOnOpen]);
+    if (current.readAt) return;
+    if (filter === 'unread') {
+      const at = listing?.items.findIndex((q) => q.ref === current.ref) ?? -1;
+      if (at >= 0) setHeld({ item: { ...current, readAt: Date.now() }, at });
+    }
+    act('read', [current], true, false);
+  }, [current, act, readOnOpen, filter, listing]);
+
+  useEffect(() => {
+    if (held && (held.item.ref !== selected || filter !== 'unread')) setHeld(null);
+  }, [held, selected, filter]);
 
   const move = useCallback(
     (step: number, extend = false) => {
@@ -149,6 +165,25 @@ function Inbox() {
     const next = order.slice(last + 1).find((r) => !gone.has(r)) ?? order.find((r) => !gone.has(r));
     if (next) go(next);
   }, [targets, order, go]);
+
+  /** Opens an item by ref or `#slug`, widening the list to every item when it isn't listed. */
+  const open = useCallback(
+    async (ref: string) => {
+      const hit = items.find(
+        (q) => q.ref === ref || (q.slug && `#${q.slug}` === ref.toLowerCase()),
+      );
+      if (hit) return go(hit.ref);
+      const q = await api.item(ref).catch(() => null);
+      if (!q) return;
+      setFilter('all');
+      setKind(q.kind);
+      setRepo(null);
+      setTag(null);
+      setText('');
+      go(q.ref);
+    },
+    [items, go],
+  );
 
   const box = useCallback((k: Kind) => {
     setFilter('inbox');
@@ -235,7 +270,7 @@ function Inbox() {
         parent={items.find((q) => q.ref === current?.parent) ?? null}
         tags={listing?.tags ?? []}
         onTag={tagItem}
-        onSelect={(ref) => go(ref)}
+        onSelect={open}
         onArchive={(q) => flip('archive', [q], q)}
         onPin={(q) => flip('pin', [q], q)}
         onUnread={(q) => flip('read', [q], q)}

@@ -24,5 +24,9 @@ export default defineConfig({
       },
     },
   },
-  server: { host: '::', proxy: { '/api': 'http://127.0.0.1:8771' }, ...weasel.server },
+  server: {
+    host: '::',
+    proxy: { '/api': `http://127.0.0.1:${process.env.DIXERAM_PORT ?? 8771}` },
+    ...weasel.server,
+  },
 });

@@ -41,6 +41,8 @@ export const api = {
     if (text) q.set('text', text);
     return fetch(`/api/items?${q}`).then((r) => json<Listing>(r));
   },
+  item: (id: string) =>
+    fetch(`/api/item?${new URLSearchParams({ id })}`).then((r) => json<Item>(r)),
   post: (
     path:
       | 'read'

@@ -154,7 +154,12 @@ export function Reader({
             onClick={(e) => {
               const a = (e.target as HTMLElement).closest('a');
               const href = a?.getAttribute('href') ?? '';
-              if (href.startsWith('/') || href.startsWith('file://')) {
+              const ref = a?.dataset.ref;
+              if (ref) {
+                if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                e.preventDefault();
+                onSelect(ref);
+              } else if (href.startsWith('/') || href.startsWith('file://')) {
                 e.preventDefault();
                 onOpenPath(q, href);
               }

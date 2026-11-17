@@ -5,6 +5,8 @@ const MAX_LENGTH = 48;
 
 /** `#cost-of-slugs`: two or more words, so it can't be a heading, a hex color, or a lone tag. */
 export const SLUG = /(?<![\w#&/])#([a-z0-9]+(?:-[a-z0-9]+)+)(?![\w-])/gi;
+/** `q-17` standing alone, not part of a longer token such as `faq-17` or `q-17b`. */
+export const REF = /(?<![\w-])([qt]-\d+)(?![\w-])/gi;
 
 /** A slug as stored, from whatever Claude passed (`#Cost of slugs`, `cost_of_slugs`), or null. */
 export function slugOf(raw: string): string | null {

@@ -33,4 +33,4 @@
 - After changing `outlets/menubar/menubar.yaml`, run `npm run menubar:install` with `PERCH` set to a perch built
   from `~/src/perch` (`go build -o <path> ./cmd/perch`); the released perch lacks `gutter`.
 - Point a test run at a scratch store with `DIXERAM_HOME=<dir>` (and `DIXERAM_PORT` for a second
-  daemon); never seed the real inbox.
+  daemon, which `npm run dev` then proxies to); never seed the real inbox.
