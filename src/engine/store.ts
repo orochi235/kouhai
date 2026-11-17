@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { dropEnclosures, keep } from './enclosures.ts';
 import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
 import { slugOf, slugRef } from './slug.ts';
 import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
@@ -306,7 +307,7 @@ export class Store {
       throw new Error(`a ${item.kind} settles as ${allowed.join(', ')}, not ${outcome}`);
     }
     const merged = [...item.attachments];
-    for (const a of attachments) {
+    for (const a of keep(item.id, attachments)) {
       if (!merged.some((m) => m.kind === a.kind && m.ref === a.ref)) merged.push(a);
     }
     const at = this.now();
@@ -510,9 +511,12 @@ export class Store {
 
   prune(): { items: number; turns: number } {
     const now = this.now();
-    const q = this.db
-      .prepare('DELETE FROM items WHERE archived_at IS NOT NULL AND archived_at < ? AND pinned = 0')
-      .run(now - ARCHIVE_TTL_MS);
+    const gone = this.db
+      .prepare(
+        'DELETE FROM items WHERE archived_at IS NOT NULL AND archived_at < ? AND pinned = 0 RETURNING id',
+      )
+      .all(now - ARCHIVE_TTL_MS) as Row[];
+    for (const r of gone) dropEnclosures(Number(r.id));
     const t = this.db
       .prepare(
         'DELETE FROM turns WHERE at < ? AND id NOT IN (SELECT turn FROM items WHERE turn IS NOT NULL)',
@@ -520,6 +524,6 @@ export class Store {
       .run(now - TURN_TTL_MS);
     this.db.prepare('DELETE FROM chased WHERE at < ?').run(now - TURN_TTL_MS);
     this.tags.prune();
-    return { items: Number(q.changes), turns: Number(t.changes) };
+    return { items: gone.length, turns: Number(t.changes) };
   }
 }

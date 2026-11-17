@@ -1,8 +1,8 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ARCHIVE_TTL_MS, TURN_TTL_MS } from './paths.ts';
 import { Store } from './store.ts';
 import type { Context } from './types.ts';
@@ -96,6 +96,33 @@ describe('Store', () => {
     expect(s.chaseOnce('m1')).toBe(true);
     expect(s.chased('m1')).toBe(true);
     expect(s.chaseOnce('m1')).toBe(false);
+  });
+
+  it('keeps its own copy of a transom attachment, and deletes it with the item', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
+    vi.stubEnv('DIXERAM_HOME', join(dir, 'home'));
+    try {
+      const shot = join(dir, 'shot.png');
+      writeFileSync(shot, 'png');
+      const { s, tick } = store();
+      s.take([q('does it render?')], null, ctx);
+      const item = s.settle('q-1', 'answered', 'yes', [{ kind: 'transom', ref: shot }]);
+      const [a] = item?.attachments ?? [];
+      expect(a).toEqual({
+        kind: 'file',
+        ref: join(dir, 'home', 'enclosures', '1', 'shot.png'),
+        label: 'shot.png',
+      });
+      rmSync(shot);
+      expect(existsSync(a?.ref ?? '')).toBe(true);
+      s.setArchived('q-1');
+      tick(ARCHIVE_TTL_MS + 1);
+      s.prune();
+      expect(existsSync(a?.ref ?? '')).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('prunes old archived items, orphan turns, and old chase keys, keeping pinned ones', () => {

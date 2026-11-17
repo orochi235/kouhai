@@ -15,7 +15,8 @@ export type Turn = Context & { id: string; prompt: string; at: number };
 
 /**
  * Something richer than the note. `artifact` is a claude.ai artifact URL, `file` a local path,
- * `url` any link, `transom` a path that was posted to the transom wall.
+ * `url` any link, `transom` a path that was posted to the transom wall. Anything pointing into
+ * transom is copied into the ledger when attached, since the wall deletes what it holds.
  */
 export type Attachment = {
   kind: 'artifact' | 'file' | 'url' | 'transom';
