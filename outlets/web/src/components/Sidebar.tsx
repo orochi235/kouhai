@@ -8,9 +8,9 @@ import { TagRail } from './Tags.tsx';
 /** The two inboxes split the ledger by kind; the views below them span both. */
 const BOXES: { filter: Filter; kind?: Kind; label: string; count?: keyof Listing['counts'] }[] = [
   { filter: 'unread', label: 'Unread', count: 'unread' },
+  { filter: 'inbox', kind: 'question', label: 'Questions', count: 'questions' },
   { filter: 'inbox', kind: 'task', label: 'Tasks', count: 'tasks' },
   { filter: 'owed', label: 'Owed', count: 'owed' },
-  { filter: 'inbox', kind: 'question', label: 'Questions', count: 'questions' },
   { filter: 'pinned', label: 'Pinned' },
   { filter: 'archived', label: 'Archived' },
 ];

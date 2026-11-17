@@ -49,6 +49,8 @@
   padding: 12px 16px 13px 10px;
   border-bottom: 1px solid var(--rule);
   cursor: pointer;
+  /* The reader's project tint, fading in from the edge the reader sits against. */
+  background-image: linear-gradient(to left, var(--tint, transparent), transparent 55%);
 }
 
 .item.reply {
@@ -70,16 +72,16 @@
 }
 
 .item:hover {
-  background: var(--select);
+  background-color: var(--select);
 }
 
 .item.picked {
-  background: var(--paper-sheet);
+  background-color: var(--paper-sheet);
   box-shadow: inset 3px 0 0 var(--rule);
 }
 
 .item.selected {
-  background: var(--paper-sheet);
+  background-color: var(--paper-sheet);
   box-shadow: inset 3px 0 0 var(--stamp);
 }
 

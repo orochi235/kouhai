@@ -77,7 +77,7 @@ export function MessageList({
                   role="button"
                   tabIndex={0}
                   aria-current={q.ref === selected}
-                  className={`item ${state} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''} ${picked.length > 1 && picked.includes(q.ref) ? 'picked' : ''}`}
+                  className={`item ${state} ${q.repo ? repoClass(q.repo) : ''} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''} ${picked.length > 1 && picked.includes(q.ref) ? 'picked' : ''}`}
                   onClick={(e) => onSelect(q.ref, e)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {

@@ -11,10 +11,17 @@ export function inkFor(bg: string): string {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? '#000' : '#fff';
 }
 
-/** One rule per repo carrying its .hued colors, so chips color themselves without inline styles. */
+/** A project's background washed over the paper, chosen in the tint lab (2026-11-17). */
+const tint = (bg: string) =>
+  `light-dark(color-mix(in srgb, ${bg} 10%, transparent), color-mix(in srgb, ${bg} 17%, transparent))`;
+
+/** One rule per repo carrying its .hued colors, so chips and tints color themselves without inline styles. */
 export function repoSheet(repos: Repo[]): string {
   return repos
     .flatMap((r) => (r.hued?.bg ? [{ repo: r.repo, bg: r.hued.bg, fg: r.hued.fg }] : []))
-    .map((r) => `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)}}`)
+    .map(
+      (r) =>
+        `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)};--tint:${tint(r.bg)}}`,
+    )
     .join('\n');
 }
