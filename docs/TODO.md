@@ -13,12 +13,16 @@
   Claude's records; test with mixed-source fixtures whose unqualified session ids collide. The full
   adapter plan, unbuilt, is [CHATGPT-SUPPORT.md](../CHATGPT-SUPPORT.md). From the 2026-11-14 review.
 
-- **Pick the reader's project tint, then delete the tint lab.** The reader pane is washed in its
-  project's `.hued` background at 7% (`outlets/web/src/components/Reader.css`), a first attempt; it
-  vanishes in dark mode for dark project colors. `outlets/web/lab/` (served at `:8771/lab.html`) varies
-  the strength, the source color, the surface, the blend, and how dark mode lifts the color, across six
-  real projects. Once one is chosen, move it into `Reader.css` and remove `lab/`, `lab.html`, the `lab`
-  build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency. Lab built 2026-11-16.
+- **Delete the tint lab once the tint has settled.** The tint was chosen 2026-11-17: the project's
+  `.hued` background at 10% in light and 17% in dark, defined once in `repoSheet`
+  (`outlets/web/src/repoColors.ts`) and used by the reader and the list rows. `outlets/web/lab/`
+  (served at `:8771/lab.html`) is kept while it is still being tuned; removing it means `lab/`,
+  `lab.html`, the `lab` build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency.
+
+- **Copy transom images a note links to, not only its attachments.** `keep` in
+  `src/engine/enclosures.ts` copies an attached transom file or wall URL into `~/.dixeram/enclosures/`,
+  but a note's markdown image pointing into `~/transom` or at `localhost:8787/to/…` still breaks
+  once the wall clears it. Found 2026-11-17, when two older items' attached shots were already gone.
 
 - **Rename away from a name that reads as "dicks".** Favorite so far: *kouhai* (the junior who keeps
   track for the senior); runners-up *slate* and *chit*. Left for later (2026-11-16). The rename
