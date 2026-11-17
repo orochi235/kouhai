@@ -120,4 +120,26 @@ describe('outlets', () => {
     s.take([{ kind: 'question', text: 'why?' }], null, ctx);
     expect(await next()).toContain(s.version());
   });
+
+  it('still tells a connected client of a change when another client connects first', async () => {
+    const s = new Store(':memory:');
+    const server = createServer(s);
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const ac = new AbortController();
+    close = () => {
+      ac.abort();
+      server.close();
+    };
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const open = async () => {
+      const res = await fetch(`${base}/api/events`, { signal: ac.signal });
+      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+      return async () => new TextDecoder().decode((await reader.read()).value);
+    };
+    const first = await open();
+    await first();
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx);
+    await (await open())();
+    expect(await first()).toContain(s.version());
+  });
 });

@@ -176,8 +176,8 @@ function events(store: Store) {
       'cache-control': 'no-store',
       connection: 'keep-alive',
     });
-    last = store.version();
-    res.write(`event: change\ndata: ${JSON.stringify({ version: last })}\n\n`);
+    // Never reset `last` here: a change since the last tick would then reach no one already connected.
+    res.write(`event: change\ndata: ${JSON.stringify({ version: store.version() })}\n\n`);
     clients.add(res);
     req.on('close', () => clients.delete(res));
   };

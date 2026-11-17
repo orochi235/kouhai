@@ -15,13 +15,17 @@ export function inkFor(bg: string): string {
 const tint = (bg: string) =>
   `light-dark(color-mix(in srgb, ${bg} 10%, transparent), color-mix(in srgb, ${bg} 17%, transparent))`;
 
+/** The list row's wash, stronger than the reader's because it fades out across the row. */
+const rowTint = (bg: string) =>
+  `light-dark(color-mix(in srgb, ${bg} 24%, transparent), color-mix(in srgb, ${bg} 34%, transparent))`;
+
 /** One rule per repo carrying its .hued colors, so chips and tints color themselves without inline styles. */
 export function repoSheet(repos: Repo[]): string {
   return repos
     .flatMap((r) => (r.hued?.bg ? [{ repo: r.repo, bg: r.hued.bg, fg: r.hued.fg }] : []))
     .map(
       (r) =>
-        `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)};--tint:${tint(r.bg)}}`,
+        `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)};--tint:${tint(r.bg)};--row-tint:${rowTint(r.bg)}}`,
     )
     .join('\n');
 }

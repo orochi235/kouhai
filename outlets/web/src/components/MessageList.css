@@ -50,7 +50,7 @@
   border-bottom: 1px solid var(--rule);
   cursor: pointer;
   /* The reader's project tint, fading in from the edge the reader sits against. */
-  background-image: linear-gradient(to left, var(--tint, transparent), transparent 55%);
+  background-image: linear-gradient(to left, var(--row-tint, transparent), transparent 70%);
 }
 
 .item.reply {
