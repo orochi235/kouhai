@@ -41,6 +41,11 @@ export const api = {
     if (text) q.set('text', text);
     return fetch(`/api/items?${q}`).then((r) => json<Listing>(r));
   },
+  /** Each SF Symbol name that draws, as a base64 PNG; names that don't are left out. */
+  glyphs: (names: string[]) =>
+    fetch(`/outlets/web/glyphs?${new URLSearchParams({ names: names.join(' ') })}`).then((r) =>
+      json<Record<string, string>>(r),
+    ),
   item: (id: string) =>
     fetch(`/api/item?${new URLSearchParams({ id })}`).then((r) => json<Item>(r)),
   post: (

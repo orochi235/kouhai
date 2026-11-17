@@ -24,7 +24,7 @@ import { Sidebar } from './components/Sidebar.tsx';
 import { tagSheet } from './components/Tags.tsx';
 import { useInboxKeys } from './keys.ts';
 import { prefs } from './prefs.ts';
-import { repoSheet } from './repoColors.ts';
+import { iconsOf, repoSheet } from './repoColors.ts';
 import { useListSelection } from './selection.ts';
 import { thread } from './thread.ts';
 import { useUndo } from './undo.ts';
@@ -74,6 +74,16 @@ function Inbox() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const icons = useMemo(() => iconsOf(listing?.repos ?? []).join(' '), [listing]);
+  const [glyphs, setGlyphs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!icons) return;
+    api
+      .glyphs(icons.split(' '))
+      .then(setGlyphs)
+      .catch(() => {});
+  }, [icons]);
 
   useEffect(
     () =>
@@ -286,7 +296,7 @@ function Inbox() {
 
   return (
     <div className="app">
-      <style>{`${repoSheet(listing?.repos ?? [])}\n${tagSheet(listing?.tags ?? [])}`}</style>
+      <style>{`${repoSheet(listing?.repos ?? [], glyphs)}\n${tagSheet(listing?.tags ?? [])}`}</style>
       <Panes
         panes={[
           { id: 'sidebar', node: sidebar, share: 0.17, min: 180 },

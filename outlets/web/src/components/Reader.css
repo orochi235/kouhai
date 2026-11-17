@@ -34,6 +34,18 @@
   white-space: nowrap;
 }
 
+/* The project's SF Symbol, masked so it takes the chip's ink. */
+.toolbar .chip.project::before {
+  content: "";
+  display: var(--glyph-show, none);
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.3em;
+  vertical-align: -0.05em;
+  background-color: currentColor;
+  mask: var(--glyph) center / contain no-repeat;
+}
+
 .toolbar .ref {
   font-family: var(--mono);
   font-size: 13px;

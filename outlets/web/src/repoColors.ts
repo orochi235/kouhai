@@ -20,12 +20,19 @@ const rowTint = (bg: string) =>
   `light-dark(color-mix(in srgb, ${bg} 24%, transparent), color-mix(in srgb, ${bg} 34%, transparent))`;
 
 /** One rule per repo carrying its .hued colors, so chips and tints color themselves without inline styles. */
-export function repoSheet(repos: Repo[]): string {
+export function repoSheet(repos: Repo[], glyphs: Record<string, string> = {}): string {
   return repos
-    .flatMap((r) => (r.hued?.bg ? [{ repo: r.repo, bg: r.hued.bg, fg: r.hued.fg }] : []))
-    .map(
-      (r) =>
-        `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)};--tint:${tint(r.bg)};--row-tint:${rowTint(r.bg)}}`,
-    )
+    .flatMap((r) => (r.hued?.bg ? [{ repo: r.repo, ...r.hued }] : []))
+    .map((r) => {
+      const png = r.icon ? glyphs[r.icon] : undefined;
+      const glyph = png
+        ? `--glyph:url(data:image/png;base64,${png});--glyph-show:inline-block;`
+        : '';
+      return `.${repoClass(r.repo)}{--chip-bg:${r.bg};--chip-fg:${r.fg || inkFor(r.bg)};--tint:${tint(r.bg)};--row-tint:${rowTint(r.bg)};${glyph}}`;
+    })
     .join('\n');
 }
+
+/** The SF Symbol names the listed repos' `.hued` files give, for `api.glyphs`. */
+export const iconsOf = (repos: Repo[]) =>
+  [...new Set(repos.flatMap((r) => (r.hued?.icon ? [r.hued.icon] : [])))].sort();
