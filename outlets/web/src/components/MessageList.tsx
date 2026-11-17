@@ -6,7 +6,7 @@ import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import type { Press } from '../selection.ts';
 import type { Row } from '../thread.ts';
-import { age } from '../time.ts';
+import { age, useNow } from '../time.ts';
 import './MessageList.css';
 import { TagChips } from './Tags.tsx';
 
@@ -50,6 +50,7 @@ export function MessageList({
   onText,
   onSelect,
 }: Props) {
+  const now = useNow();
   return (
     <section className="list">
       <div className="search">
@@ -95,7 +96,7 @@ export function MessageList({
                     )}
                     {q.pinned && <span className="pin">pinned</span>}
                     <TagChips names={q.tags} tags={tags} />
-                    <time>{age(q.settledAt ?? q.raisedAt)}</time>
+                    <time>{age(q.settledAt ?? q.raisedAt, now)}</time>
                   </span>
                   <span className="q" dangerouslySetInnerHTML={{ __html: renderPreview(q.text) }} />
                   {q.note ? (
