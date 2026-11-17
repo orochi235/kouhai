@@ -4,7 +4,10 @@
   min-height: 0;
   min-width: 0;
   /* The item's project color, from its .hued, washed over the paper. */
-  background-color: color-mix(in srgb, var(--chip-bg, transparent) 7%, transparent);
+  background-color: light-dark(
+    color-mix(in srgb, var(--chip-bg, transparent) 10%, transparent),
+    color-mix(in srgb, var(--chip-bg, transparent) 17%, transparent)
+  );
 }
 
 .reader.blank {

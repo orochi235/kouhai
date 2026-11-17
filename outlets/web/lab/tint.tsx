@@ -16,11 +16,11 @@ const SAMPLES = [
 ] as const;
 
 const config = f.schema({
-  source: f.enum('background', ['background', 'foreground', 'accent']).label('Project color'),
+  source: f.enum('background', ['background', 'foreground', 'accent']).label('Source'),
   surface: f.enum('pane', ['pane', 'toolbar', 'sheet', 'edge']).label('Surface'),
   blend: f.enum('wash', ['wash', 'mix', 'fade']).label('Blend'),
-  strength: f.number(7).range(0, 40).step(1).label('Strength %'),
-  darkStrength: f.number(7).range(0, 40).step(1).label('Strength % in dark'),
+  strength: f.number(10).range(0, 40).step(1).label('Strength %'),
+  darkStrength: f.number(17).range(0, 40).step(1).label('Strength % in dark'),
   darkLift: f.number(0).range(0, 80).step(5).label('Lift toward white in dark %'),
 });
 type Config = ConfigOf<typeof config>;
