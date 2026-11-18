@@ -1,5 +1,5 @@
 import icons from 'virtual:weasel-icons';
-import { EditorShell, useOpenPreferences } from '@weasel-js/editor';
+import { EditorShell, useOpenPrefs } from '@weasel-js/editor';
 import { IconRegistryProvider } from '@weasel-js/icons/react';
 import { usePref } from '@weasel-js/prefs/react';
 import { ShortcutSheet, useShortcutSheetCommand } from '@weasel-js/ui/components/ShortcutSheet';
@@ -50,7 +50,7 @@ function Inbox() {
   const [readOnOpen] = usePref(prefs, 'inbox.readOnOpen');
   const [sheet, setSheet] = useState(false);
   useShortcutSheetCommand(() => setSheet(true));
-  const openPrefs = useOpenPreferences();
+  const openPrefs = useOpenPrefs();
   const [repo, setRepo] = useState<string | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const [text, setText] = useState('');
