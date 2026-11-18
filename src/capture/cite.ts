@@ -1,4 +1,5 @@
 import { ownWords } from '../engine/detect.ts';
+import { staleCites } from '../engine/git.ts';
 import { nameOf, REF, SLUG } from '../engine/slug.ts';
 import type { Store } from '../engine/store.ts';
 import type { Item } from '../engine/types.ts';
@@ -37,7 +38,15 @@ export function itemText(q: Item, cap = Infinity): string {
     : q.note.length > cap
       ? `${q.note.slice(0, cap)}… (cut at ${cap} of ${q.note.length} characters; dixeram's \`show\` tool returns all of it)`
       : q.note;
-  return `[${nameOf(q)}] (${q.kind}, ${where}) asked: ${JSON.stringify(q.text)}\nAnswer: ${note}`;
+  const stale = staleCites(q);
+  return (
+    `[${nameOf(q)}] (${[q.kind, where, q.basis].filter(Boolean).join(', ')}) asked: ${JSON.stringify(q.text)}\n` +
+    (q.verdict ? `Verdict: ${q.verdict}\n` : '') +
+    `Answer: ${note}` +
+    (stale.length
+      ? `\n(Since this was settled at ${q.head?.slice(0, 7)}, these files it cites changed: ${stale.join(', ')}. Check before relying on it.)`
+      : '')
+  );
 }
 
 /** Marks this answer of `q` shown to a session; false when it already was. A new settlement shows again. */

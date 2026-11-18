@@ -1,5 +1,5 @@
 // The tools the MCP server offers, as tools/list returns them.
-import { ATTACHMENT_KINDS, KINDS, OUTCOMES } from '../engine/types.ts';
+import { ATTACHMENT_KINDS, BASES, KINDS, OUTCOMES, SCOPES } from '../engine/types.ts';
 
 export const ALL_OUTCOMES = [...new Set(Object.values(OUTCOMES).flat())];
 
@@ -13,6 +13,27 @@ const ATTACHMENTS = {
       label: { type: 'string' },
     },
     required: ['kind', 'ref'],
+  },
+};
+
+/** What a settlement says beyond its note, on `settle` and on a `take` item filed settled. */
+const SETTLEMENT = {
+  verdict: {
+    type: 'string',
+    description:
+      'The answer in one sentence; shown above the note, so the note need not repeat it.',
+  },
+  basis: {
+    type: 'string',
+    enum: BASES,
+    description:
+      'measured: you ran or measured it; read: from code or docs; inferred: reasoning only.',
+  },
+  scope: {
+    type: 'string',
+    enum: SCOPES,
+    description:
+      'session: of no use once this session ends (a label on a page made for this task, a status check); archived then. Default durable.',
   },
 };
 
@@ -50,6 +71,7 @@ export const TOOLS = [
                 description: 'To file it already settled, with `note`.',
               },
               note: { type: 'string', description: 'As for `settle`.' },
+              ...SETTLEMENT,
             },
             required: ['kind', 'text'],
           },
@@ -76,19 +98,10 @@ export const TOOLS = [
         id: { type: 'string', description: 'The item id or slug, e.g. q-17 or #cost-of-slugs.' },
         outcome: { type: 'string', enum: ALL_OUTCOMES },
         note: { type: 'string' },
+        ...SETTLEMENT,
         attachments: ATTACHMENTS,
       },
       required: ['id', 'outcome', 'note'],
-    },
-  },
-  {
-    name: 'clear',
-    description:
-      'Clear an answered question from the inbox as seen, only when the dixeram hook says to.',
-    inputSchema: {
-      type: 'object',
-      properties: { id: { type: 'string', description: 'The item id or slug, e.g. q-17.' } },
-      required: ['id'],
     },
   },
   {

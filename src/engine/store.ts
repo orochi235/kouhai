@@ -3,80 +3,24 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dropEnclosures, keep, keepNote } from './enclosures.ts';
-import { ARCHIVE_TTL_MS, dbPath, TURN_TTL_MS } from './paths.ts';
+import { citesIn, headOf } from './git.ts';
+import { ARCHIVE_TTL_MS, dbPath, SESSION_IDLE_MS, TURN_TTL_MS } from './paths.ts';
+import { migrate, REVISION } from './schema.ts';
 import { slugOf, slugRef } from './slug.ts';
 import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
 import {
   type Attachment,
+  type Basis,
   type Context,
   type Filter,
   type Item,
   type Kind,
   OUTCOMES,
   type Outcome,
+  type Scope,
+  type Settlement,
   type Turn,
 } from './types.ts';
-
-const TURNS = `
-CREATE TABLE IF NOT EXISTS turns (
-  id TEXT PRIMARY KEY,
-  session TEXT, harness TEXT, cwd TEXT, root TEXT, repo TEXT, transcript TEXT,
-  prompt TEXT NOT NULL,
-  at INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS chased (
-  key TEXT PRIMARY KEY,
-  at INTEGER NOT NULL
-);`;
-
-const ITEMS = `
-CREATE TABLE IF NOT EXISTS items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  turn TEXT,
-  session TEXT, harness TEXT, cwd TEXT, root TEXT, repo TEXT, transcript TEXT,
-  prompt TEXT,
-  kind TEXT NOT NULL DEFAULT 'question',
-  text TEXT NOT NULL,
-  outcome TEXT,
-  note TEXT,
-  attachments TEXT NOT NULL DEFAULT '[]',
-  raised_at INTEGER NOT NULL,
-  settled_at INTEGER,
-  read_at INTEGER,
-  archived_at INTEGER,
-  pinned INTEGER NOT NULL DEFAULT 0,
-  nagged INTEGER NOT NULL DEFAULT 0,
-  updated_at INTEGER NOT NULL,
-  parent TEXT,
-  misfiled_at INTEGER,
-  misfiled_why TEXT
-);
-CREATE INDEX IF NOT EXISTS items_session ON items (session, outcome);`;
-
-/** v1 kept only questions, in a `questions` table; each becomes a question item, ids unchanged. */
-const FROM_QUESTIONS = `
-ALTER TABLE questions RENAME TO items;
-ALTER TABLE items RENAME COLUMN question TO text;
-ALTER TABLE items RENAME COLUMN answer TO note;
-ALTER TABLE items RENAME COLUMN asked_at TO raised_at;
-ALTER TABLE items RENAME COLUMN answered_at TO settled_at;
-ALTER TABLE items ADD COLUMN kind TEXT NOT NULL DEFAULT 'question';
-ALTER TABLE items ADD COLUMN outcome TEXT;
-UPDATE items SET outcome = 'answered' WHERE note IS NOT NULL;
-DROP INDEX IF EXISTS questions_session;`;
-
-/** Bumped by trigger inside every write a viewer could see, whichever process makes it. */
-const REVISION = `
-CREATE TABLE IF NOT EXISTS revision (id INTEGER PRIMARY KEY CHECK (id = 1), n INTEGER NOT NULL);
-INSERT OR IGNORE INTO revision (id, n) VALUES (1, 0);
-${['items', 'tags', 'item_tags']
-  .flatMap((t) =>
-    ['INSERT', 'UPDATE', 'DELETE'].map(
-      (op) => `CREATE TRIGGER IF NOT EXISTS bump_${t}_${op.toLowerCase()} AFTER ${op} ON ${t}
-BEGIN UPDATE revision SET n = n + 1 WHERE id = 1; END;`,
-    ),
-  )
-  .join('\n')}`;
 
 type Row = Record<string, string | number | null>;
 
@@ -103,6 +47,11 @@ function toItem(r: Row): Item {
     text: String(r.text),
     outcome: s('outcome') as Outcome | null,
     note: s('note'),
+    verdict: s('verdict'),
+    basis: s('basis') as Basis | null,
+    scope: s('scope') as Scope | null,
+    head: s('head'),
+    cites: JSON.parse(String(r.cites ?? '[]')) as string[],
     attachments: JSON.parse(String(r.attachments ?? '[]')) as Attachment[],
     session: s('session'),
     harness: s('harness'),
@@ -144,40 +93,9 @@ export class Store {
     if (path !== ':memory:') chmodSync(path, 0o600);
     this.now = now;
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;');
-    this.db.exec(TURNS);
-    this.migrate();
+    migrate(this.db);
     this.tags = new Tags(this.db, now);
     this.db.exec(REVISION);
-  }
-
-  private has(table: string): boolean {
-    return Boolean(
-      this.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table),
-    );
-  }
-
-  private migrate() {
-    if (!this.has('items') && this.has('questions')) {
-      this.db.exec('BEGIN');
-      try {
-        this.db.exec(FROM_QUESTIONS);
-        this.db.exec('COMMIT');
-      } catch (err) {
-        this.db.exec('ROLLBACK');
-        throw err;
-      }
-    }
-    this.db.exec(ITEMS);
-    const cols = this.db.prepare('PRAGMA table_info(items)').all() as Row[];
-    if (!cols.some((c) => c.name === 'parent'))
-      this.db.exec('ALTER TABLE items ADD COLUMN parent TEXT');
-    if (!cols.some((c) => c.name === 'misfiled_at'))
-      this.db.exec(
-        'ALTER TABLE items ADD COLUMN misfiled_at INTEGER; ALTER TABLE items ADD COLUMN misfiled_why TEXT',
-      );
-    if (!cols.some((c) => c.name === 'slug'))
-      this.db.exec('ALTER TABLE items ADD COLUMN slug TEXT');
-    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS items_slug ON items (slug)');
   }
 
   /** The id a ref names: `q-17`, `17`, `#cost-of-slugs`, or `cost-of-slugs`. */
@@ -299,6 +217,7 @@ export class Store {
     outcome: Outcome,
     note: string,
     attachments: Attachment[] = [],
+    extra: Settlement = {},
   ): Item | null {
     const item = this.get(ref);
     if (!item) return null;
@@ -311,11 +230,25 @@ export class Store {
       if (!merged.some((m) => m.kind === a.kind && m.ref === a.ref)) merged.push(a);
     }
     const at = this.now();
+    const kept = keepNote(item.id, note);
     this.db
       .prepare(
-        'UPDATE items SET outcome = ?, note = ?, attachments = ?, settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?',
+        `UPDATE items SET outcome = ?, note = ?, attachments = ?, verdict = ?, basis = ?, scope = ?, head = ?, cites = ?,
+         settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?`,
       )
-      .run(outcome, keepNote(item.id, note), JSON.stringify(merged), at, at, item.id);
+      .run(
+        outcome,
+        kept,
+        JSON.stringify(merged),
+        extra.verdict?.trim() || null,
+        extra.basis ?? null,
+        extra.scope ?? null,
+        item.root ? headOf(item.root) : null,
+        JSON.stringify(item.root ? citesIn(kept, item.root) : []),
+        at,
+        at,
+        item.id,
+      );
     return this.get(item.id);
   }
 
@@ -457,17 +390,22 @@ export class Store {
     return rows.map(toItem);
   }
 
-  /** Takes a settled item out of the inbox as already seen: read and archived at once. */
-  clear(ref: string | number): Item | null {
-    const id = this.idFor(ref);
-    if (id == null) return null;
+  /**
+   * Archives what a finished session settled as `session` scope, unread or not; with no session,
+   * every such item whose session has had no turn for `idleMs`, for sessions that ended unseen.
+   */
+  archiveEnded(session: string | null, idleMs = SESSION_IDLE_MS): string[] {
     const at = this.now();
-    this.db
+    const where = session
+      ? 'session = ?'
+      : 'session IS NOT NULL AND COALESCE((SELECT MAX(t.at) FROM turns t WHERE t.session = items.session), settled_at) < ?';
+    const rows = this.db
       .prepare(
-        'UPDATE items SET read_at = ?, archived_at = ?, updated_at = ? WHERE id = ? AND outcome IS NOT NULL',
+        `UPDATE items SET archived_at = ?, updated_at = ? WHERE scope = 'session' AND outcome IS NOT NULL
+         AND archived_at IS NULL AND pinned = 0 AND ${where} RETURNING id, kind`,
       )
-      .run(at, at, at, id);
-    return this.get(id);
+      .all(at, at, session ?? at - idleMs) as Row[];
+    return rows.map((r) => refOf(r.kind as Kind, Number(r.id)));
   }
 
   /** Whether this session opened a turn for a prompt, so its message reached the filing rule. */

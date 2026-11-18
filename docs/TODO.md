@@ -1,5 +1,13 @@
 # dixeram — open work
 
+- **Measure what `verdict`, `basis`, and `scope` cost on real sessions.** They landed 2026-11-17 with
+  the `clear` tool and its per-turn rule removed. Fixed cost went from 3,258 to 3,986 characters of
+  tool schemas (about +180 tokens per request); the dropped rule was about 376 characters, injected
+  on 91 of 252 prompts across this repo's transcripts. Around 2026-11-24, run
+  `scripts/token-cost.mjs` with `--fixed $(scripts/fixed-cost.ts --chars)` on a week of sessions on
+  either side of the change, and check how often agents fill each field and whether `session` scope
+  is being judged well (archived answers that are needed later).
+
 - **Listen to debates and find the questions nobody answers.** Turn it on during a debate or a
   meeting: transcribe the audio, attribute each line to a speaker (diarization), file every
   question one speaker puts to another as an item owed by the one asked, and settle it when an

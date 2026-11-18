@@ -46,6 +46,9 @@ export const api = {
     fetch(`/outlets/web/glyphs?${new URLSearchParams({ names: names.join(' ') })}`).then((r) =>
       json<Record<string, string>>(r),
     ),
+  /** The files an item's note cites that changed since it was settled. */
+  stale: (id: string) =>
+    fetch(`/api/stale?${new URLSearchParams({ id })}`).then((r) => json<{ changed: string[] }>(r)),
   item: (id: string) =>
     fetch(`/api/item?${new URLSearchParams({ id })}`).then((r) => json<Item>(r)),
   post: (

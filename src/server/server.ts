@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import { extname } from 'node:path';
+import { staleCites } from '../engine/git.ts';
 import { port } from '../engine/paths.ts';
 import { repos } from '../engine/repos.ts';
 import { Store } from '../engine/store.ts';
@@ -9,6 +10,7 @@ import { FILTERS, type Filter, type Item, KINDS, type Kind } from '../engine/typ
 import type { Handler, Outlet } from './outlet.ts';
 import { serveStatic } from './static.ts';
 
+const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** How often the server checks the store for changes to push; writers are other processes. */
 const WATCH_MS = 500;
@@ -110,6 +112,7 @@ export function routes(store: Store): Record<string, Handler> {
       };
     },
     'GET /api/item': (q) => need(q.get('id')),
+    'GET /api/stale': (q) => ({ changed: staleCites(need(q.get('id'))) }),
     'POST /api/read': (_q, b) => store.setRead(need(b.id).id, b.read !== false),
     'POST /api/archive': (_q, b) => store.setArchived(need(b.id).id, b.archived !== false),
     'POST /api/pin': (_q, b) => store.setPinned(need(b.id).id, b.pinned !== false),
@@ -249,6 +252,13 @@ export function runDaemon(outlets: Outlet[]): void {
   };
   prune();
   setInterval(prune, DAY_MS).unref();
+  // A session killed with its terminal never runs the session-end hook.
+  const ended = () => {
+    const refs = store.archiveEnded(null);
+    if (refs.length) console.log(`archived ${refs.length} items from ended sessions`);
+  };
+  ended();
+  setInterval(ended, HOUR_MS).unref();
   createServer(store, outlets).listen(port(), '::', () => {
     console.log(
       `dixeram on http://localhost:${port()}, outlets: ${outlets.map((o) => o.name).join(', ')}`,

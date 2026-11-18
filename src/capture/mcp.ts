@@ -8,10 +8,15 @@ import type { Store } from '../engine/store.ts';
 import {
   ATTACHMENT_KINDS,
   type Attachment,
+  BASES,
+  type Basis,
   type Context,
   KINDS,
   type Kind,
   type Outcome,
+  SCOPES,
+  type Scope,
+  type Settlement,
 } from '../engine/types.ts';
 import { itemText, markShown } from './cite.ts';
 import { RULE } from './hooks.ts';
@@ -66,25 +71,32 @@ type Taken = {
   slug: string | null;
   settled: Settled | null;
 };
-type Settled = { outcome: Outcome; note: string; attachments: Attachment[] };
+type Settled = { outcome: Outcome; note: string; attachments: Attachment[]; extra: Settlement };
+
+/** The verdict, basis, and scope an agent passed, keeping only values of the right shape. */
+function settlementOf(v: Record<string, unknown>): Settlement {
+  return {
+    verdict: typeof v.verdict === 'string' && v.verdict.trim() ? v.verdict.trim() : null,
+    basis: BASES.includes(v.basis as Basis) ? (v.basis as Basis) : null,
+    scope: SCOPES.includes(v.scope as Scope) ? (v.scope as Scope) : null,
+  };
+}
 
 function itemsOf(v: unknown): Taken[] {
   if (!Array.isArray(v)) return [];
   return v.flatMap((i) => {
     if (!i || typeof i !== 'object') return [];
-    const {
-      kind,
-      text: t,
-      parent,
-      slug,
-      outcome,
-      note,
-      attachments,
-    } = i as Record<string, unknown>;
+    const fields = i as Record<string, unknown>;
+    const { kind, text: t, parent, slug, outcome, note, attachments } = fields;
     if (!KINDS.includes(kind as Kind) || typeof t !== 'string' || !t.trim()) return [];
     const settled =
       ALL_OUTCOMES.includes(outcome as Outcome) && typeof note === 'string' && note.trim()
-        ? { outcome: outcome as Outcome, note, attachments: attachmentsOf(attachments) }
+        ? {
+            outcome: outcome as Outcome,
+            note,
+            attachments: attachmentsOf(attachments),
+            extra: settlementOf(fields),
+          }
         : null;
     return [
       {
@@ -140,7 +152,7 @@ export function callTool(
       const s = items[n]?.settled;
       if (!s) return { head, owed: true, question: false };
       try {
-        store.settle(i.id, s.outcome, s.note, s.attachments);
+        store.settle(i.id, s.outcome, s.note, s.attachments, s.extra);
         return {
           head: `${head} [settled as ${s.outcome}: ${link(i.ref)}]`,
           owed: false,
@@ -179,6 +191,7 @@ export function callTool(
       args.outcome as Outcome,
       args.note,
       attachmentsOf(args.attachments),
+      settlementOf(args),
     );
     if (!item) return text(`No item ${args.id}.`, true);
     return text(
@@ -186,15 +199,6 @@ export function callTool(
         (item.attachments.length ? ` with ${item.attachments.length} enclosed` : '') +
         (item.kind === 'question' ? `. ${markerRule([item.ref], link).replace(/^e/, 'E')}.` : '.'),
     );
-  }
-  if (name === 'clear') {
-    if (typeof args.id !== 'string' && typeof args.id !== 'number')
-      return text('`id` is required.', true);
-    const item = store.get(args.id);
-    if (!item) return text(`No item ${args.id}.`, true);
-    if (!item.outcome) return text(`${item.ref} is still owed; settle it first.`, true);
-    store.clear(item.id);
-    return text(`${item.ref} cleared from the inbox as seen.`);
   }
   if (name === 'show') {
     const ids = Array.isArray(args.ids) ? args.ids : [args.ids];

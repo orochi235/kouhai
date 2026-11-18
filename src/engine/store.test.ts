@@ -234,4 +234,32 @@ describe('misfiles', () => {
     expect(undone).toMatchObject({ misfiledAt: null, misfiledWhy: null, archivedAt: null });
     expect(s.misfiles()).toEqual([]);
   });
+
+  it("archives a session's session-scope answers when it ends, and only those", () => {
+    const { s } = store();
+    s.take([q('is it live?'), q('why WAL?'), q('pinned one?'), t('owed task')], null, ctx);
+    s.settle('q-1', 'answered', 'yes', [], { scope: 'session' });
+    s.settle('q-2', 'answered', 'readers never block', [], { scope: 'durable' });
+    s.settle('q-3', 'answered', 'kept', [], { scope: 'session' });
+    s.setPinned('q-3');
+    s.take([q('other session?')], null, { ...ctx, session: 's2' });
+    s.settle('q-5', 'answered', 'yes', [], { scope: 'session' });
+    expect(s.archiveEnded('s1')).toEqual(['q-1']);
+    expect(
+      s
+        .list('inbox')
+        .map((i) => i.ref)
+        .sort(),
+    ).toEqual(['q-2', 'q-3', 'q-5', 't-4']);
+  });
+
+  it('archives session-scope answers from sessions idle past the cutoff', () => {
+    const { s, tick } = store();
+    s.addTurn(ctx, 'is it live?');
+    s.take([q('is it live?')], null, ctx);
+    s.settle('q-1', 'answered', 'yes', [], { scope: 'session' });
+    expect(s.archiveEnded(null, 1000)).toEqual([]);
+    tick(1001);
+    expect(s.archiveEnded(null, 1000)).toEqual(['q-1']);
+  });
 });

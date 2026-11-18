@@ -90,7 +90,9 @@ export function MessageList({
                   <span className="meta">
                     <span className={`kind kind-${q.kind}`}>{q.ref}</span>
                     {q.slug && <span className="slug">#{q.slug}</span>}
-                    {q.repo && <span className={`chip project ${repoClass(q.repo)}`}>{q.repo}</span>}
+                    {q.repo && (
+                      <span className={`chip project ${repoClass(q.repo)}`}>{q.repo}</span>
+                    )}
                     {q.outcome && q.outcome !== 'answered' && q.outcome !== 'done' && (
                       <span className={`outcome ${q.outcome}`}>{q.outcome}</span>
                     )}
@@ -104,7 +106,9 @@ export function MessageList({
                       {q.kind === 'task' && q.outcome === 'done' && (
                         <Icon name={icon('ui:check')} size={14} className="done" label="Done" />
                       )}
-                      <span dangerouslySetInnerHTML={{ __html: renderPreview(q.note) }} />
+                      <span
+                        dangerouslySetInnerHTML={{ __html: renderPreview(q.verdict ?? q.note) }}
+                      />
                     </span>
                   ) : (
                     <span className="a">

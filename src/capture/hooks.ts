@@ -32,26 +32,12 @@ export const RULE =
 export const REMINDER =
   "File its direct questions and unfinished instructions by the filing rule in dixeram's server instructions.";
 
-/** What was settled last turn: parents a follow-up can name, and answers this prompt may show were read. */
+/** What was settled last turn: parents a follow-up can name. */
 function lastTurnRule(settled: Item[]): string {
-  const list = (items: Item[]) => items.map((q) => `${q.ref} ${quote(q.text, 60)}`).join(', ');
-  const unread = settled.filter(
-    (q) => q.kind === 'question' && q.outcome === 'answered' && !q.readAt && !q.archivedAt,
-  );
+  const list = settled.map((q) => `${q.ref} ${quote(q.text, 60)}`).join(', ');
   return (
-    `Last turn you settled ${list(settled)}. If a question you file follows up on one of those ` +
-    "answers, pass that item's id as the question's `parent`; leave `parent` out for a new subject." +
-    (unread.length ? ` ${seenRule(unread)}` : '')
-  );
-}
-
-/** Last turn's unread answers, which this prompt may show were already read. */
-function seenRule(answered: Item[]): string {
-  return (
-    `Clear one of ${answered.map((q) => q.ref).join(', ')} with the dixeram \`clear\` tool only when both hold: this prompt responds to that ` +
-    'answer, so the user has seen it; and the answer is about something that will not outlive this ' +
-    'session, such as a label on a page made for this task. Otherwise leave it in the inbox: an ' +
-    'answer that lasts, or one the user moved on from, is what the inbox is for.'
+    `Last turn you settled ${list}. If a question you file follows up on one of those ` +
+    "answers, pass that item's id as the question's `parent`; leave `parent` out for a new subject."
   );
 }
 
@@ -179,4 +165,10 @@ export function sessionStartHook(store: Store, p: Payload): HookOutput {
         'are not yours unless the user hands them to you.',
     },
   };
+}
+
+/** When a session ends, its answers that were of use only to it leave the inbox. */
+export function sessionEndHook(store: Store, p: Payload): HookOutput {
+  if (typeof p.session_id === 'string' && p.session_id) store.archiveEnded(p.session_id);
+  return null;
 }

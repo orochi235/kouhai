@@ -115,6 +115,18 @@ export function Reader({
                 <dd>{stamp(q.settledAt)}</dd>
               </div>
             )}
+            {q.basis && (
+              <div>
+                <dt>basis</dt>
+                <dd>{q.basis}</dd>
+              </div>
+            )}
+            {q.scope === 'session' && (
+              <div>
+                <dt>scope</dt>
+                <dd>this session only</dd>
+              </div>
+            )}
             {q.cwd && (
               <div className="wide">
                 <dt>in</dt>

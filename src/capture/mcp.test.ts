@@ -16,7 +16,7 @@ const call = (s: Store, name: string, args: object) =>
   };
 
 describe('mcp', () => {
-  it('lists take, settle, clear, owed, and show', () => {
+  it('lists take, settle, owed, and show', () => {
     const out = handle(new Store(':memory:'), fb, {
       jsonrpc: '2.0',
       id: 1,
@@ -24,13 +24,7 @@ describe('mcp', () => {
     }) as {
       result: { tools: { name: string }[] };
     };
-    expect(out.result.tools.map((t) => t.name)).toEqual([
-      'take',
-      'settle',
-      'clear',
-      'owed',
-      'show',
-    ]);
+    expect(out.result.tools.map((t) => t.name)).toEqual(['take', 'settle', 'owed', 'show']);
   });
 
   it('shows items by id, and marks them shown to the session', () => {
@@ -102,13 +96,39 @@ describe('mcp', () => {
     ).toBeNull();
   });
 
-  it('clears a settled question from the inbox, and refuses an owed one', () => {
+  it('keeps a verdict, basis, and scope, dropping values of the wrong shape', () => {
     const s = new Store(':memory:');
-    s.take([{ kind: 'question', text: 'what do the badges mean?' }], null, fb);
-    expect(call(s, 'clear', { id: 'q-1' }).result.isError).toBe(true);
-    s.settle('q-1', 'answered', 'unread items');
-    expect(call(s, 'clear', { id: 'q-1' }).result.isError).toBeUndefined();
-    expect(s.counts()).toMatchObject({ unread: 0, inbox: 0 });
+    call(s, 'take', {
+      items: [
+        {
+          kind: 'question',
+          text: 'is it live?',
+          outcome: 'answered',
+          note: 'Yes, rebuilt and restarted.',
+          verdict: 'Yes.',
+          basis: 'measured',
+          scope: 'session',
+        },
+      ],
+    });
+    expect(s.get('q-1')).toMatchObject({ verdict: 'Yes.', basis: 'measured', scope: 'session' });
+    call(s, 'settle', { id: 'q-1', outcome: 'answered', note: 'still yes', basis: 'guessed' });
+    expect(s.get('q-1')).toMatchObject({ verdict: null, basis: null, scope: null });
+  });
+
+  it('shows the verdict and basis to an agent reading the item', () => {
+    const s = new Store(':memory:');
+    call(s, 'take', { items: [{ kind: 'question', text: 'why?' }] });
+    call(s, 'settle', {
+      id: 'q-1',
+      outcome: 'answered',
+      note: 'long',
+      verdict: 'Because.',
+      basis: 'read',
+    });
+    const out = call(s, 'show', { ids: ['q-1'] }).result.content[0]?.text ?? '';
+    expect(out).toContain('Verdict: Because.');
+    expect(out).toContain('read)');
   });
 
   it('threads a follow-up under a settled item, and refuses an owed parent', () => {

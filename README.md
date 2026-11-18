@@ -20,11 +20,11 @@ says where. Work still waiting on a later turn stays owed.
 | -------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Prompt sent    | `UserPromptSubmit` hook    | Opens a _turn_ holding the prompt's context and tells Claude the filing rule and the turn id. Messages sent mid-turn get this hook too. If the session's tools lack `take` (a server older than the rule, or one that failed to connect), it says so once, as `dixeram ✗`. |
 | Claude files   | MCP tool `take`            | Claude files each question, and each task it won't finish now, with a slug of a few words, getting back `q-17 #cost-of-slugs`. Either name works anywhere after, and a `#slug` in a prompt cites the item like `[q-17]`. A question that follows up on an answer Claude gave last turn names it as `parent`; the page nests it under that answer.                                                       |
-| Claude settles | MCP tool `settle`          | An outcome and a markdown note written to stand alone, linking every file, commit, and issue it names, plus optional attachments (an artifact URL, a file, a link, a transom render). Settling again replaces the note and marks it unread.                                |
-| Answer seen    | MCP tool `clear`           | On the next prompt the hook names last turn's answers. When that prompt responds to one and the answer won't outlive the session (a label on a page made for this task), Claude clears it: read and archived, so it never sits unread.                                     |
+| Claude settles | MCP tool `settle`          | An outcome and a markdown note written to stand alone, linking every file, commit, and issue it names, plus optional attachments (an artifact URL, a file, a link, a transom render). Optional fields: a one-sentence `verdict` (the list row shows it instead of the note), a `basis` (`measured`, `read`, or `inferred`), and a `scope` (`session` for an answer of no use once the session ends; `durable` by default). The ledger records the repo's commit and the files the note links, and flags the answer when one of those files has changed since. Settling again replaces the note and marks it unread. |
 | Turn ends      | `Stop` hook                | Silent unless something is unfiled: it holds the turn open once for a message sent mid-turn that no prompt hook delivered, found in the transcript. Owed items are already in the ledger, so it leaves them alone.                                                         |
 | Subagent ends  | `SubagentStop` hook        | Holds a subagent open once if it left items it filed owed: it settles them or names them in its report, so the agent that started it carries them.                                                                                                                         |
 | Next session   | `SessionStart` hook        | Owed and unread items from this repo get mentioned in one line.                                                                                                                                                                                                            |
+| Session ends   | `SessionEnd` hook          | Archives what the session settled with `session` scope. The daemon does the same hourly for sessions with no turn in 12 hours, since a killed terminal never runs the hook. |
 | You read it    | `localhost:8771`, menu bar | The ledger by repo, with unread and owed counts in the menu bar. The Claude status line (in chezmoi's `claude-statusline.sh`) shows `⧗` for what the session owes and `✉` for the repo's unread answers.                                                                                                                                                                                                           |
 
 The MCP server Claude Code keeps running is only a relay: each request runs in a fresh process, so
@@ -77,6 +77,7 @@ API. A browser outlet such as a stream overlay needs only the API:
 | ------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `GET /api/items?filter=owed&kind=task&repo=&tag=&text=&limit=` | items, counts, per-repo summaries, and tags                        |
 | `GET /api/item?id=t-18`                                       | one item                                                            |
+| `GET /api/stale?id=q-17`                                      | `{ changed }`: files the note cites that changed since it was settled |
 | `GET /api/events`                                             | a server-sent `change` event, with the new version, on every change |
 | `GET /api/image?id=q-17&path=`                                | an image the item attached or its note links, and no other          |
 | `POST /api/read`, `/api/archive`, `/api/pin`, `/api/read-all` | `{ id, read \| archived \| pinned }`                                |
@@ -117,3 +118,7 @@ dixeram prune
 references, never copies. An archived item is deleted 180 days after it was archived, unless
 pinned. Turns and the record of chased mid-turn messages are deleted after two days. The daemon
 prunes on start and daily; `dixeram prune` does it now. The daemon logs to `~/.dixeram/daemon.log`.
+
+`scripts/fixed-cost.ts` prints what dixeram adds to every request (its instructions and tool
+schemas) and to each turn; `scripts/token-cost.mjs <transcript>... --fixed $(scripts/fixed-cost.ts --chars)`
+measures a session's share. Run both before and after a change to anything an agent reads.

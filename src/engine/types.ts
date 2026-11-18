@@ -36,6 +36,17 @@ export const OUTCOMES: Record<Kind, Outcome[]> = {
   task: ['done', 'dropped', 'deferred'],
 };
 
+/** What an answer rests on: something run or measured, code or docs read, or reasoning alone. */
+export type Basis = 'measured' | 'read' | 'inferred';
+export const BASES: Basis[] = ['measured', 'read', 'inferred'];
+
+/** Whether an answer matters past the session it was given in; `session` ones are archived when it ends. */
+export type Scope = 'session' | 'durable';
+export const SCOPES: Scope[] = ['session', 'durable'];
+
+/** What a settlement says beyond its note. */
+export type Settlement = { verdict?: string | null; basis?: Basis | null; scope?: Scope | null };
+
 export type Item = Context & {
   id: number;
   /** `q-17` for a question, `t-17` for a task; the number alone identifies it. */
@@ -48,6 +59,15 @@ export type Item = Context & {
   outcome: Outcome | null;
   /** The answer, what was done, or why it was dropped or deferred. Markdown. */
   note: string | null;
+  /** The answer in one sentence, shown above the note. */
+  verdict: string | null;
+  basis: Basis | null;
+  /** Null reads as `durable`. */
+  scope: Scope | null;
+  /** The repo's commit when it was settled, so `cites` can be checked for changes since. */
+  head: string | null;
+  /** Files under the repo that the note links. */
+  cites: string[];
   attachments: Attachment[];
   /** The whole prompt the item came from, capped, so it can be read in its setting. */
   prompt: string | null;

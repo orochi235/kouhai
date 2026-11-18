@@ -1,7 +1,7 @@
 {
   "name": "dixeram",
   "description": "A ledger of what Claude sessions owe you: direct questions, and instructions not yet carried out",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "author": { "name": "Michael Baker", "email": "contact@michaelbaker.tech" },
   "license": "MIT",
   "keywords": ["questions", "inbox", "answers", "hooks", "mcp"],
