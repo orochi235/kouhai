@@ -1,6 +1,6 @@
 {
   "name": "dixeram-aside",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in dixeram",
   "license": "MIT",
   "author": {

@@ -68,7 +68,12 @@ test('/btw shows the answer in a pane Escape closes, and prints nothing', async 
   await start($);
   const out = await $.command.run(typed('btw', 'what is PBT?'));
   expect(out.text).toBeUndefined();
-  expect(opened[0]).toMatchObject({ id: 'aside', focus: true, closeOnEscape: true });
+  expect(opened[0]).toMatchObject({
+    id: 'aside',
+    focus: true,
+    closeOnEscape: true,
+    backgroundColor: 'transparent',
+  });
   expect(JSON.parse(runs[0]?.stdin ?? '{}').via).toBe('btw');
   const ui = await $.ui.mount({
     plugin: 'dixeram-aside',

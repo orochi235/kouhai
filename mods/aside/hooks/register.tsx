@@ -96,6 +96,7 @@ export const register: Register = (on) => {
       focus: true,
       closeOnEscape: true,
       holdToasts: true,
+      backgroundColor: 'transparent',
     });
     return opened.isPlaced ? {} : { text: line(a) };
   });
