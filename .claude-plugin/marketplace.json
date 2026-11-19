@@ -14,8 +14,8 @@
     },
     {
       "name": "dixeram-aside",
-      "description": "Answers /btw and /ask from the live session's cache, and keeps each answer in dixeram",
-      "version": "0.1.0",
+      "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in dixeram",
+      "version": "0.2.0",
       "source": "./mods/aside"
     }
   ]

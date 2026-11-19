@@ -1,10 +1,11 @@
 {
   "name": "dixeram-aside",
-  "version": "0.1.0",
-  "description": "Answers /btw and /ask from the live session's cache, and keeps each answer in dixeram",
+  "version": "0.2.0",
+  "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in dixeram",
   "license": "MIT",
   "author": {
     "name": "Michael Baker",
     "email": "contact@michaelbaker.tech"
-  }
+  },
+  "types": "./types/index.d.ts"
 }

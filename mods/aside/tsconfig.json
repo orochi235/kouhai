@@ -8,5 +8,5 @@
     "lib": ["ES2022"],
     "types": []
   },
-  "include": [".claude-plugin/types/claude-code/index.d.ts", "hooks/**/*.ts"]
+  "include": [".claude-plugin/types/claude-code/index.d.ts", "hooks/**/*.ts", "hooks/**/*.tsx", "types/*.d.ts"]
 }
