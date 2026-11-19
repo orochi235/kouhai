@@ -26,6 +26,12 @@
   `.claude-plugin/marketplace.json`, then `claude plugin update dixeram@dixeram` in each config
   directory (`~/.claude`, `~/.claude-msb`, `~/.claude-pw`). Keep the plugin in its own
   directory: pointed at the repo root, every cached version copies `node_modules`.
+- `mods/aside/` is a Claude Code mod (a hooks module, not command hooks), listed in the marketplace as
+  `dixeram-aside`. Like `plugin/`, it runs from a cached copy: bump its version in
+  `mods/aside/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, then
+  `claude plugin update dixeram-aside@dixeram` in each config directory. Test it with `claude plugin test mods/aside`;
+  `claude plugin validate mods/aside` checks it the way the engine loads it. `/btw` is not available under `claude -p`,
+  so whether the mod catches it can only be seen in an interactive session.
 - Capture never depends on the daemon: hooks and the MCP server write SQLite directly with
   `node:sqlite`, so they carry no runtime dependencies. Keep it that way.
 - Node strips types rather than compiling them, so no parameter properties, enums, or

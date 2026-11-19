@@ -78,6 +78,7 @@ const ADDED: [string, string][] = [
   ['head', 'TEXT'],
   ['cites', "TEXT NOT NULL DEFAULT '[]'"],
   ['via', 'TEXT'],
+  ['usage', 'TEXT'],
 ];
 
 const has = (db: DatabaseSync, table: string) =>

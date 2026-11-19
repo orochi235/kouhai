@@ -1,13 +1,22 @@
 {
   "name": "dixeram",
   "description": "A ledger of what Claude sessions owe you",
-  "owner": { "name": "Michael Baker", "email": "contact@michaelbaker.tech" },
+  "owner": {
+    "name": "Michael Baker",
+    "email": "contact@michaelbaker.tech"
+  },
   "plugins": [
     {
       "name": "dixeram",
       "description": "A ledger of what Claude sessions owe you: direct questions, and instructions not yet carried out",
       "version": "0.5.0",
       "source": "./plugin"
+    },
+    {
+      "name": "dixeram-aside",
+      "description": "Answers /btw and /ask from the live session's cache, and keeps each answer in dixeram",
+      "version": "0.1.0",
+      "source": "./mods/aside"
     }
   ]
 }

@@ -63,6 +63,7 @@ export function fileBtws(store: Store, configDir: string): Item[] {
       const m = typeof entry.display === 'string' ? BTW.exec(entry.display.trim()) : null;
       if (!m) continue;
       const ctx = contextOf({ session: entry.sessionId, cwd: entry.project, configDir });
+      if (answeredAside(store, ctx.session, m[1] as string)) continue;
       filed.push(
         ...store.take([{ kind: 'question', text: m[1] as string, via: 'btw' }], null, ctx),
       );
@@ -70,6 +71,12 @@ export function fileBtws(store: Store, configDir: string): Item[] {
     const read = Buffer.byteLength(whole);
     return { at: (at > size ? 0 : at) + read, out: filed };
   });
+}
+
+/** Whether the mod already caught this /btw and filed its answer, which history records all the same. */
+function answeredAside(store: Store, session: string | null, text: string): boolean {
+  if (!session) return false;
+  return store.list('all', { session }).some((i) => i.via === 'btw' && i.text === text.trim());
 }
 
 /** This session's /btw questions not yet put to its agent; each is put once, by whichever hook comes first. */

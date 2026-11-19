@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { menubar } from '../outlets/menubar/outlet.ts';
 import { web } from '../outlets/web/outlet.ts';
+import { asideOf, fileAside } from './capture/aside.ts';
 import { configDirs, fileBtws } from './capture/btw.ts';
 import {
   type Payload,
@@ -32,6 +33,7 @@ const USAGE = `dixeram: a ledger of what Claude sessions owe you
   dixeram daemon                     serve the inbox page on :${port()}
   dixeram mcp                        the MCP server Claude Code starts (a relay)
   dixeram mcp-call                   answer one MCP request from stdin, for the relay
+  dixeram aside                      file a side question the mod answered (JSON on stdin)
   dixeram hook prompt|stop|subagent-stop|session-start|session-end  the hooks Claude Code runs`;
 
 async function stdin(): Promise<Payload> {
@@ -95,6 +97,18 @@ async function main(argv: string[]) {
                     ? sessionEndHook(store, p)
                     : null;
         if (out) process.stdout.write(`${JSON.stringify(out)}\n`);
+      } finally {
+        store.close();
+      }
+      return;
+    }
+    case 'aside': {
+      let json = '';
+      for await (const chunk of process.stdin) json += chunk;
+      const store = new Store();
+      try {
+        const q = fileAside(store, asideOf(json), process.env.CLAUDE_CONFIG_DIR);
+        console.log(q.ref);
       } finally {
         store.close();
       }

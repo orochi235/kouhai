@@ -44,8 +44,11 @@ export const BASES: Basis[] = ['measured', 'read', 'inferred'];
 export type Scope = 'session' | 'durable';
 export const SCOPES: Scope[] = ['session', 'durable'];
 
-/** How an item reached the ledger when an agent didn't file it: `btw` from a /btw side question. */
-export type Via = 'btw';
+/**
+ * How an item reached the ledger when an agent didn't file it: `btw` from a /btw side question,
+ * `ask` from the mod's /ask.
+ */
+export type Via = 'btw' | 'ask';
 
 /** What a settlement says beyond its note. */
 export type Settlement = { verdict?: string | null; basis?: Basis | null; scope?: Scope | null };
@@ -73,6 +76,8 @@ export type Item = Context & {
   cites: string[];
   /** Null for an item an agent filed. */
   via: Via | null;
+  /** Token counts of the model call that answered it, when dixeram made that call. */
+  usage: Record<string, unknown> | null;
   attachments: Attachment[];
   /** The whole prompt the item came from, capped, so it can be read in its setting. */
   prompt: string | null;

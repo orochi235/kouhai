@@ -54,6 +54,7 @@ function toItem(r: Row): Item {
     head: s('head'),
     cites: JSON.parse(String(r.cites ?? '[]')) as string[],
     via: s('via') as Via | null,
+    usage: r.usage == null ? null : (JSON.parse(String(r.usage)) as Record<string, unknown>),
     attachments: JSON.parse(String(r.attachments ?? '[]')) as Attachment[],
     session: s('session'),
     harness: s('harness'),
@@ -227,6 +228,7 @@ export class Store {
     note: string,
     attachments: Attachment[] = [],
     extra: Settlement = {},
+    usage: Record<string, unknown> | null = null,
   ): Item | null {
     const item = this.get(ref);
     if (!item) return null;
@@ -243,7 +245,7 @@ export class Store {
     this.db
       .prepare(
         `UPDATE items SET outcome = ?, note = ?, attachments = ?, verdict = ?, basis = ?, scope = ?, head = ?, cites = ?,
-         settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?`,
+         usage = ?, settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?`,
       )
       .run(
         outcome,
@@ -254,6 +256,7 @@ export class Store {
         extra.scope ?? null,
         item.root ? headOf(item.root) : null,
         JSON.stringify(item.root ? citesIn(kept, item.root) : []),
+        usage ? JSON.stringify(usage) : null,
         at,
         at,
         item.id,
