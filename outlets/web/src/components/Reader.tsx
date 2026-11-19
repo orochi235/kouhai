@@ -97,8 +97,8 @@ export function Reader({
             <p className="re">
               {q.kind === 'task'
                 ? 'You told it to'
-                : q.via === 'btw'
-                  ? 'You asked with /btw'
+                : q.via
+                  ? `You asked with /${q.via}`
                   : 'You asked'}
             </p>
             {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}
