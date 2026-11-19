@@ -1,12 +1,18 @@
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
 import { dixeramTools, filedRefs, unledgeredMidTurn } from '../engine/transcript.ts';
 import type { Item } from '../engine/types.ts';
+import { btwRule, fileBtws, untoldBtws } from './btw.ts';
 import { citations } from './cite.ts';
 
 export type Payload = Record<string, unknown>;
 export type HookOutput = Record<string, unknown> | null;
+
+/** How long a /btw's own session has to go quiet before another session in the repo answers it. */
+const BTW_ORPHAN_MS = 30 * 60 * 1000;
 
 const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…` : s}"`;
 
@@ -75,6 +81,7 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const { forced } = detect(prompt);
   const broken = missingTake(store, ctx.session, ctx.transcript);
   const cited = citations(store, prompt, ctx.session);
+  const btws = ctx.session ? sideQuestions(store, ctx.session, configDir) : [];
   return {
     ...(broken
       ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }
@@ -93,19 +100,34 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
           ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect dixeram fixes it.`
           : '') +
         (settled.length ? ` ${lastTurnRule(settled)}` : '') +
+        (btws.length ? ` ${btwRule(btws)}` : '') +
         (cited ? `\n\n${cited}` : ''),
     },
   };
+}
+
+/** Files new /btw questions from this harness's history, and returns this session's not yet put to it. */
+function sideQuestions(store: Store, session: string, configDir?: string): Item[] {
+  fileBtws(store, configDir ?? join(homedir(), '.claude'));
+  return untoldBtws(store, session);
 }
 
 /**
  * Holds the turn open once, and only for something unfiled: a message the user sent mid-turn
  * that no prompt hook delivered the filing rule for. Owed items are already in the ledger.
  */
-export function stopHook(store: Store, p: Payload): HookOutput {
+export function stopHook(store: Store, p: Payload, configDir?: string): HookOutput {
   const session = typeof p.session_id === 'string' ? p.session_id : null;
   const transcript = typeof p.transcript_path === 'string' ? p.transcript_path : null;
   if (!session || !transcript) return null;
+  const btws = sideQuestions(store, session, configDir);
+  if (btws.length) {
+    return {
+      systemMessage: `dixeram ▸ holding the turn open to file ${btws.length === 1 ? 'a /btw question' : `${btws.length} /btw questions`}`,
+      decision: 'block',
+      reason: `dixeram: ${btwRule(btws)} If that is all, end the turn without saying so.`,
+    };
+  }
   const mid = unledgeredMidTurn(transcript)
     .filter((m) => !store.heard(session, m.text))
     .filter((m) => store.chaseOnce(m.key));
@@ -139,13 +161,25 @@ export function subagentStopHook(store: Store, p: Payload): HookOutput {
 }
 
 /** On a fresh session, what this repo's earlier sessions still owe or settled unread. */
-export function sessionStartHook(store: Store, p: Payload): HookOutput {
+export function sessionStartHook(store: Store, p: Payload, configDir?: string): HookOutput {
   if (p.source !== 'startup' || typeof p.cwd !== 'string') return null;
   const { repo } = contextOf({ cwd: p.cwd });
   if (!repo) return null;
+  fileBtws(store, configDir ?? join(homedir(), '.claude'));
+  // A /btw whose session went quiet before it could be put to it is answered by the next session here.
+  const quiet = store.now() - BTW_ORPHAN_MS;
+  const btws = store
+    .list('owed', { repo })
+    .filter(
+      (i) =>
+        i.via === 'btw' &&
+        i.raisedAt < quiet &&
+        (i.session ? (store.lastTurnAt(i.session) ?? 0) : 0) < quiet &&
+        store.chaseOnce(`btw-told:${i.ref}`),
+    );
   const unread = store.list('unread', { repo, limit: 6 });
-  const owed = store.list('owed', { repo, limit: 6 });
-  if (!unread.length && !owed.length) return null;
+  const owed = store.list('owed', { repo, limit: 6 }).filter((i) => !btws.includes(i));
+  if (!unread.length && !owed.length && !btws.length) return null;
   const line = (items: Item[]) => items.map((i) => `${i.ref} ${quote(i.text, 60)}`).join('; ');
   const said = [
     ...(owed.length ? [`still owed: ${line(owed)}`] : []),
@@ -155,14 +189,21 @@ export function sessionStartHook(store: Store, p: Payload): HookOutput {
     ...(owed.length ? [`${owed.length} owed`] : []),
     ...(unread.length ? [`${unread.length} unread`] : []),
   ];
+  if (btws.length) badge.push(`${btws.length} /btw to answer`);
   return {
     systemMessage: `dixeram ▸ this repo has ${badge.join(', ')}`,
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
       additionalContext:
-        `dixeram: in this repo, ${said.join('. ')}. Mention these in one line at the start of your ` +
-        'first reply (the ledger is `dixeram open`), then carry on. Owed items from other sessions ' +
-        'are not yours unless the user hands them to you.',
+        'dixeram:' +
+        (said.length
+          ? ` in this repo, ${said.join('. ')}. Mention these in one line at the start of your ` +
+            'first reply (the ledger is `dixeram open`), then carry on. Owed items from other sessions ' +
+            'are not yours unless the user hands them to you.'
+          : '') +
+        (btws.length
+          ? ` ${btwRule(btws).replace('which you never saw', 'in an earlier session')}`
+          : ''),
     },
   };
 }

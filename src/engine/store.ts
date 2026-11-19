@@ -20,6 +20,7 @@ import {
   type Scope,
   type Settlement,
   type Turn,
+  type Via,
 } from './types.ts';
 
 type Row = Record<string, string | number | null>;
@@ -52,6 +53,7 @@ function toItem(r: Row): Item {
     scope: s('scope') as Scope | null,
     head: s('head'),
     cites: JSON.parse(String(r.cites ?? '[]')) as string[],
+    via: s('via') as Via | null,
     attachments: JSON.parse(String(r.attachments ?? '[]')) as Attachment[],
     session: s('session'),
     harness: s('harness'),
@@ -170,7 +172,13 @@ export class Store {
    * must name a settled item; it is stored as that item's ref.
    */
   take(
-    items: { kind: Kind; text: string; parent?: string | null; slug?: string | null }[],
+    items: {
+      kind: Kind;
+      text: string;
+      parent?: string | null;
+      slug?: string | null;
+      via?: Via | null;
+    }[],
     turnId: string | null,
     fallback: Context,
   ): Item[] {
@@ -178,11 +186,11 @@ export class Store {
     const ctx: Context = turn ?? fallback;
     const at = this.now();
     const insert = this.db.prepare(
-      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at, parent, slug)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO items (turn, session, harness, cwd, root, repo, transcript, prompt, kind, text, raised_at, updated_at, parent, slug, via)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const out: Item[] = [];
-    for (const { kind, text, parent, slug } of items) {
+    for (const { kind, text, parent, slug, via } of items) {
       const t = text.trim();
       if (!t) continue;
       const p = parent ? this.get(parent) : null;
@@ -202,6 +210,7 @@ export class Store {
         at,
         p?.ref ?? null,
         this.freeSlug(slug),
+        via ?? null,
       );
       out.push(this.get(Number(lastInsertRowid)) as Item);
     }
@@ -415,6 +424,28 @@ export class Store {
         .prepare('SELECT 1 FROM turns WHERE session = ? AND prompt = ?')
         .get(session, prompt.slice(0, PROMPT_CAP)),
     );
+  }
+
+  /**
+   * Runs `step` with the cursor stored under `key` (null the first time) inside a write lock, and
+   * stores what it returns, so two processes reading the same source never both take a stretch.
+   */
+  advance<T>(key: string, step: (at: number | null) => { at: number; out: T }): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const r = this.db.prepare('SELECT n FROM cursors WHERE key = ?').get(key) as Row | undefined;
+      const { at, out } = step(r ? Number(r.n) : null);
+      this.db
+        .prepare(
+          'INSERT INTO cursors (key, n) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET n = excluded.n',
+        )
+        .run(key, at);
+      this.db.exec('COMMIT');
+      return out;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
   }
 
   /** Whether a key was already chased, without marking it. */

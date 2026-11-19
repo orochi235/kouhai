@@ -10,6 +10,7 @@ import { FILTERS, type Filter, type Item, KINDS, type Kind } from '../engine/typ
 import type { Handler, Outlet } from './outlet.ts';
 import { serveStatic } from './static.ts';
 
+const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** How often the server checks the store for changes to push; writers are other processes. */
@@ -244,8 +245,20 @@ export function createServer(store: Store, outlets: Outlet[] = []) {
   });
 }
 
-export function runDaemon(outlets: Outlet[]): void {
+/** `sweep` runs every minute against the daemon's store: capture work no hook gets to do. */
+export function runDaemon(outlets: Outlet[], sweep?: (store: Store) => void): void {
   const store = new Store();
+  if (sweep) {
+    const run = () => {
+      try {
+        sweep(store);
+      } catch (err) {
+        console.error(`sweep: ${(err as Error).message}`);
+      }
+    };
+    run();
+    setInterval(run, MINUTE_MS).unref();
+  }
   const prune = () => {
     const n = store.prune();
     if (n.items || n.turns) console.log(`pruned ${n.items} archived items, ${n.turns} turns`);

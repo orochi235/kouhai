@@ -94,7 +94,13 @@ export function Reader({
           <MisfiledNote item={q} />
           {q.parent && <Follows of={q.parent} parent={parent} onSelect={onSelect} />}
           <div className="re-row">
-            <p className="re">{q.kind === 'task' ? 'You told it to' : 'You asked'}</p>
+            <p className="re">
+              {q.kind === 'task'
+                ? 'You told it to'
+                : q.via === 'btw'
+                  ? 'You asked with /btw'
+                  : 'You asked'}
+            </p>
             {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}
           </div>
           <h2 className="headline">{q.text}</h2>

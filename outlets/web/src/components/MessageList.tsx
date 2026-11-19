@@ -90,6 +90,7 @@ export function MessageList({
                   <span className="meta">
                     <span className={`kind kind-${q.kind}`}>{q.ref}</span>
                     {q.slug && <span className="slug">#{q.slug}</span>}
+                    {q.via === 'btw' && <span className="slug">/btw</span>}
                     {q.repo && (
                       <span className={`chip project ${repoClass(q.repo)}`}>{q.repo}</span>
                     )}

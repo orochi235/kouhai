@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { menubar } from '../outlets/menubar/outlet.ts';
 import { web } from '../outlets/web/outlet.ts';
+import { configDirs, fileBtws } from './capture/btw.ts';
 import {
   type Payload,
   promptHook,
@@ -60,7 +61,9 @@ async function main(argv: string[]) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
     case 'daemon':
-      return runDaemon([web, menubar]);
+      return runDaemon([web, menubar], (store) => {
+        for (const dir of configDirs()) fileBtws(store, dir);
+      });
     case 'mcp':
       return serve();
     case 'mcp-call': {
@@ -83,11 +86,11 @@ async function main(argv: string[]) {
           rest[0] === 'prompt'
             ? promptHook(store, p, process.env.CLAUDE_CONFIG_DIR)
             : rest[0] === 'stop'
-              ? stopHook(store, p)
+              ? stopHook(store, p, process.env.CLAUDE_CONFIG_DIR)
               : rest[0] === 'subagent-stop'
                 ? subagentStopHook(store, p)
                 : rest[0] === 'session-start'
-                  ? sessionStartHook(store, p)
+                  ? sessionStartHook(store, p, process.env.CLAUDE_CONFIG_DIR)
                   : rest[0] === 'session-end'
                     ? sessionEndHook(store, p)
                     : null;

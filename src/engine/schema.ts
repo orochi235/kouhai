@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS turns (
   prompt TEXT NOT NULL,
   at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS cursors (
+  key TEXT PRIMARY KEY,
+  n INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS chased (
   key TEXT PRIMARY KEY,
   at INTEGER NOT NULL
@@ -73,6 +77,7 @@ const ADDED: [string, string][] = [
   ['scope', 'TEXT'],
   ['head', 'TEXT'],
   ['cites', "TEXT NOT NULL DEFAULT '[]'"],
+  ['via', 'TEXT'],
 ];
 
 const has = (db: DatabaseSync, table: string) =>

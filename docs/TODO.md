@@ -5,7 +5,9 @@
   tool schemas (about +180 tokens per request); the dropped rule was about 376 characters, injected
   on 91 of 252 prompts across this repo's transcripts. Around 2026-11-24, run
   `scripts/token-cost.mjs` with `--fixed $(scripts/fixed-cost.ts --chars)` on a week of sessions on
-  either side of the change, and check how often agents fill each field and whether `session` scope
+  either side of the change, and check how often agents fill each field, what answering
+  /btw questions costs (the request is 287 characters per question, plus the settle; about 0.7 a day
+  going by history), and whether `session` scope
   is being judged well (archived answers that are needed later).
 
 - **Listen to debates and find the questions nobody answers.** Turn it on during a debate or a
@@ -27,7 +29,7 @@
   (served at `:8771/lab.html`) is kept while it is still being tuned; removing it means `lab/`,
   `lab.html`, the `lab` build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency.
 
-- **Rename away from a name that reads as "dicks".** Favorite so far: *kouhai* (the junior who keeps
-  track for the senior); runners-up *slate* and *chit*. Left for later (2026-11-16). The rename
+- **Rename away from a name that reads as "dicks".** Favorite so far: _kouhai_ (the junior who keeps
+  track for the senior); runners-up _slate_ and _chit_. Left for later (2026-11-16). The rename
   touches the plugin and marketplace names, the `dev.dixeram` launchd label, `DIXERAM_HOME` and
   `DIXERAM_PORT`, the `~/.local/bin` link, and every MCP tool prefix.
