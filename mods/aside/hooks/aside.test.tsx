@@ -108,12 +108,25 @@ test('a follow-up sees the side questions asked before it', async ($, on) => {
   expect(prompts[1]).toContain('and how does it shrink?');
 });
 
-test('/btw falls back to the built-in when the fork has nothing to fork', async ($, on) => {
+test('/btw falls back to the built-in, quietly, when the fork has nothing to fork', async ($, on) => {
   const { runs } = engine(on, { isAnswered: false, reason: 'nothing-to-fork' });
+  const toasts: unknown[] = [];
+  on('ui.toast', (_: unknown, e: unknown) => {
+    toasts.push(e);
+    return { value: undefined };
+  });
   await start($);
   const out = await $.command.run(typed('btw', 'what is PBT?'));
   expect(out.text).toBe('the built-in /btw');
   expect(runs).toHaveLength(0);
+  expect(toasts).toHaveLength(0);
+});
+
+test('/ask says in words why a resumed session cannot answer yet', async ($, on) => {
+  engine(on, { isAnswered: false, reason: 'nothing-to-fork' });
+  await start($);
+  const out = await $.command.run(typed('ask', 'what is PBT?'));
+  expect(out.text).toContain('once a turn has finished');
 });
 
 test('the answer still shows when dixeram cannot keep it', async ($, on) => {

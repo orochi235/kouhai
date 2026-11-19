@@ -28,13 +28,23 @@ function promptFor(question: string, earlier: readonly Aside[]): string {
   );
 }
 
-/** Forks the live session with the question and files the answer; null when no answer came. */
-async function answer($: EngineInterface, question: string, via: Via): Promise<Aside | null> {
+/** Why a fork gave no answer, in words for the person. */
+const WHY: Record<string, string> = {
+  'nothing-to-fork':
+    'There is no conversation to answer from yet: after a start, a resume, or /clear, side questions work once a turn has finished.',
+  'api-error': 'The API refused the request.',
+  'empty-reply': 'The model replied with nothing.',
+  aborted: 'The question was cut off.',
+};
+
+/** Forks the live session with the question and files the answer, or says why there is none. */
+async function answer(
+  $: EngineInterface,
+  question: string,
+  via: Via,
+): Promise<Aside | { why: string }> {
   const r = await $.model.fork({ prompt: promptFor(question, await read($, recent)) });
-  if (!r.isAnswered) {
-    $.ui.toast(`No answer from the fork (${r.reason})`);
-    return null;
-  }
+  if (!r.isAnswered) return { why: WHY[r.reason] ?? `No answer (${r.reason}).` };
   const [session, cwd] = await Promise.all([$.session.id(), $.session.cwd()]);
   const filed = await $.process
     .run(['dixeram', 'aside'], {
@@ -67,7 +77,7 @@ export const register: Register = (on) => {
     const question = e.args.trim();
     if (!question) return { text: 'Usage: /ask <question>' };
     const a = await answer($, question, 'ask');
-    return { text: a ? line(a) : 'No answer came back; nothing was kept.' };
+    return { text: 'why' in a ? a.why : line(a) };
   });
 
   // The built-in /btw shows its answer once and keeps it nowhere. This one shows it the same way,
@@ -76,8 +86,9 @@ export const register: Register = (on) => {
   on('command.run', { command: 'btw' }, async ($, e, next) => {
     const question = e.args.trim();
     if (!question) return next(e);
+    // The built-in answers what the fork can't; the history importer files its question.
     const a = await answer($, question, 'btw');
-    if (!a) return next(e);
+    if ('why' in a) return next(e);
     await update($, shown, () => a);
     const opened = await $.ui.open({
       id: PANE,
