@@ -77,7 +77,7 @@
 
 .item.picked {
   background-color: var(--paper-sheet);
-  box-shadow: inset 3px 0 0 var(--rule);
+  box-shadow: inset 3px 0 0 color-mix(in oklab, var(--stamp) 55%, transparent);
 }
 
 .item.selected {
