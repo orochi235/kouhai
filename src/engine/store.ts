@@ -18,6 +18,8 @@ import {
   OUTCOMES,
   type Outcome,
   type Scope,
+  SETTINGS,
+  type Settings,
   type Settlement,
   type Turn,
   type Via,
@@ -242,10 +244,11 @@ export class Store {
     }
     const at = this.now();
     const kept = keepNote(item.id, note);
+    const archive = outcome === 'done' && !item.pinned && this.settings().archiveDone;
     this.db
       .prepare(
         `UPDATE items SET outcome = ?, note = ?, attachments = ?, verdict = ?, basis = ?, scope = ?, head = ?, cites = ?,
-         usage = ?, settled_at = ?, read_at = NULL, archived_at = NULL, updated_at = ? WHERE id = ?`,
+         usage = ?, settled_at = ?, read_at = NULL, archived_at = ?, updated_at = ? WHERE id = ?`,
       )
       .run(
         outcome,
@@ -258,10 +261,35 @@ export class Store {
         JSON.stringify(item.root ? citesIn(kept, item.root) : []),
         usage ? JSON.stringify(usage) : null,
         at,
+        archive ? at : null,
         at,
         item.id,
       );
     return this.get(item.id);
+  }
+
+  /** The ledger's settings: each stored value, else its default. */
+  settings(): Settings {
+    const out: Record<string, unknown> = { ...SETTINGS };
+    const rows = this.db.prepare('SELECT key, value FROM settings').all() as {
+      key: string;
+      value: string;
+    }[];
+    for (const r of rows) if (Object.hasOwn(SETTINGS, r.key)) out[r.key] = JSON.parse(r.value);
+    return out as Settings;
+  }
+
+  /** Stores one setting. Throws on a name it doesn't keep or a value of the wrong type. */
+  setSetting(key: string, value: unknown): Settings {
+    if (!Object.hasOwn(SETTINGS, key)) throw new Error(`no setting ${key}`);
+    const want = typeof SETTINGS[key as keyof Settings];
+    if (typeof value !== want) throw new Error(`${key} is a ${want}`);
+    this.db
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
+      )
+      .run(key, JSON.stringify(value));
+    return this.settings();
   }
 
   get(ref: string | number): Item | null {

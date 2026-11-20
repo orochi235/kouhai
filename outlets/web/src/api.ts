@@ -1,4 +1,4 @@
-import type { Filter, Item, Kind, Tag } from '@core/types.ts';
+import type { Filter, Item, Kind, Settings, Tag } from '@core/types.ts';
 
 export type { RepoSummary as Repo } from '@core/repos.ts';
 export type { Attachment, Filter, Item, Kind, Outcome, Tag } from '@core/types.ts';
@@ -49,6 +49,12 @@ export const api = {
   /** The files an item's note cites that changed since it was settled. */
   stale: (id: string) =>
     fetch(`/api/stale?${new URLSearchParams({ id })}`).then((r) => json<{ changed: string[] }>(r)),
+  /** The settings the ledger keeps, which capture reads as it writes. */
+  settings: () => fetch('/api/settings').then((r) => json<Settings>(r)),
+  saveSettings: (s: Partial<Settings>) =>
+    fetch('/api/settings', { method: 'POST', body: JSON.stringify(s) }).then((r) =>
+      json<Settings>(r),
+    ),
   item: (id: string) =>
     fetch(`/api/item?${new URLSearchParams({ id })}`).then((r) => json<Item>(r)),
   post: (

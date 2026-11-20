@@ -36,6 +36,14 @@ export const OUTCOMES: Record<Kind, Outcome[]> = {
   task: ['done', 'dropped', 'deferred'],
 };
 
+/** Choices the ledger keeps for itself, with their defaults: read where items are written, so they hold with no
+ *  page open. */
+export const SETTINGS = {
+  /** A task settled as done is archived as it settles, unless it is pinned. */
+  archiveDone: true,
+};
+export type Settings = typeof SETTINGS;
+
 /** What an answer rests on: something run or measured, code or docs read, or reasoning alone. */
 export type Basis = 'measured' | 'read' | 'inferred';
 export const BASES: Basis[] = ['measured', 'read', 'inferred'];

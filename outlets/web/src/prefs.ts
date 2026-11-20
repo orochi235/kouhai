@@ -1,5 +1,7 @@
+import { SETTINGS } from '@core/types.ts';
 import { openPrefsSync, type PrefGroup } from '@weasel-js/prefs';
 import { localStorageAdapter } from '@weasel-js/storage';
+import { api } from './api.ts';
 
 /** The page's preferences, kept per browser; Mod+, edits them. */
 export const PREFS = {
@@ -19,6 +21,13 @@ export const PREFS = {
             { value: 'task', label: 'Tasks' },
           ],
         },
+        archiveDone: {
+          kind: 'boolean',
+          name: 'Archive done tasks',
+          description:
+            'A task settled as done goes straight to Archived, unless it is pinned. The ledger keeps this one, so it holds in every browser',
+          default: SETTINGS.archiveDone,
+        },
         readOnOpen: {
           kind: 'boolean',
           name: 'Mark read on open',
@@ -34,3 +43,22 @@ export const prefs = openPrefsSync(PREFS, {
   storage: localStorageAdapter,
   prefix: 'dixeram.prefs.',
 });
+
+/**
+ * Mirrors the prefs the ledger keeps: takes the ledger's values on load, and sends each local change
+ * back. The ledger's value is the one capture reads, so it wins.
+ */
+export function syncLedgerPrefs() {
+  api
+    .settings()
+    .then((s) => {
+      if (prefs.get('inbox.archiveDone') !== s.archiveDone)
+        prefs.set('inbox.archiveDone', s.archiveDone);
+    })
+    .catch(() => {});
+  return prefs.subscribe((changes) => {
+    for (const c of changes)
+      if (c.path === 'inbox.archiveDone' && typeof c.value === 'boolean')
+        void api.saveSettings({ archiveDone: c.value }).catch(() => {});
+  });
+}

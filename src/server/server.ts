@@ -123,6 +123,12 @@ export function routes(store: Store): Record<string, Handler> {
         b.misfiled !== false,
         typeof b.why === 'string' ? b.why : null,
       ),
+    'GET /api/settings': () => store.settings(),
+    'POST /api/settings': (_q, b) =>
+      asked(() => {
+        for (const [key, value] of Object.entries(b)) store.setSetting(key, value);
+        return store.settings();
+      }),
     'GET /api/tags': () => store.tags.all(),
     'POST /api/tag': (_q, b) => {
       const q = need(b.id);

@@ -44,6 +44,7 @@ describe('Store', () => {
 
   it('moves an item from owed to unread to read to archived', () => {
     const { s, tick } = store();
+    s.setSetting('archiveDone', false);
     s.take([t('rename it')], null, ctx);
     expect(s.counts()).toMatchObject({ unread: 0, owed: 1 });
     tick();
@@ -54,6 +55,23 @@ describe('Store', () => {
     s.setArchived('t-1');
     expect(s.list('inbox')).toHaveLength(0);
     expect(s.list('archived')).toHaveLength(1);
+  });
+
+  it('archives a task settled as done, unless pinned or the setting is off', () => {
+    const { s } = store();
+    s.take([t('a'), t('b'), t('c'), q('d?')], null, ctx);
+    s.setPinned('t-2');
+    s.settle('t-1', 'done', 'did a');
+    s.settle('t-2', 'done', 'did b');
+    s.settle('t-3', 'dropped', 'not needed');
+    s.settle('q-4', 'answered', 'yes');
+    expect(s.list('archived').map((i) => i.ref)).toEqual(['t-1']);
+    s.setSetting('archiveDone', false);
+    s.settle('t-3', 'done', 'did c after all');
+    expect(s.get('t-3')?.archivedAt).toBeNull();
+    expect(s.settings()).toEqual({ archiveDone: false });
+    expect(() => s.setSetting('archiveDone', 'yes')).toThrow(/boolean/);
+    expect(() => s.setSetting('nope', true)).toThrow(/no setting/);
   });
 
   it('splits the inbox by kind, in listing and in counts', () => {
@@ -199,7 +217,7 @@ describe('Store', () => {
     const { s } = store();
     s.take([q('a?'), t('b')], null, ctx);
     s.settle('q-1', 'answered', 'yes');
-    s.settle('t-2', 'done', 'did');
+    s.settle('t-2', 'dropped', 'not needed');
     expect(s.readAll().sort()).toEqual(['q-1', 't-2']);
     expect(s.readAll()).toEqual([]);
   });
