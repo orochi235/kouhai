@@ -1,7 +1,9 @@
 import { Icon } from '@weasel-js/ui/components/Icon';
+import { useContextMenu } from '@weasel-js/ui/components/Menu';
 import type { RefObject } from 'react';
 import type { Filter, Item, Kind, Tag } from '../api.ts';
 import { icon } from '../icons.gen.ts';
+import { ITEM_MENU } from '../keys.ts';
 import { renderPreview } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import type { Press } from '../selection.ts';
@@ -51,6 +53,7 @@ export function MessageList({
   onSelect,
 }: Props) {
   const now = useNow();
+  const openMenu = useContextMenu(ITEM_MENU);
   return (
     <section className="list">
       <div className="search">
@@ -79,6 +82,11 @@ export function MessageList({
                   aria-current={q.ref === selected}
                   className={`item ${state} ${q.repo ? repoClass(q.repo) : ''} ${reply ? 'reply' : ''} ${q.ref === selected ? 'selected' : ''} ${picked.length > 1 && picked.includes(q.ref) ? 'picked' : ''}`}
                   onClick={(e) => onSelect(q.ref, e)}
+                  onContextMenu={(e) => {
+                    if (!picked.includes(q.ref))
+                      onSelect(q.ref, { shiftKey: false, metaKey: false, ctrlKey: false });
+                    openMenu(e);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();

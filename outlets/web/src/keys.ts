@@ -1,4 +1,5 @@
-import { type KeySpec, useCommand } from '@weasel-js/core';
+import { type KeySpec, type MenuDef, useCommand, useMenus } from '@weasel-js/core';
+import { pref } from '@weasel-js/prefs';
 import type { Item, Kind } from './api.ts';
 
 const key = (k: string | readonly string[]): KeySpec => ({ kind: 'key', key: k as string });
@@ -20,6 +21,23 @@ type Inbox = {
   box: (kind: Kind) => void;
 };
 
+/** The menu a right-click on a row opens: the item commands, which act on every picked row. */
+export const ITEM_MENU = 'inbox.item';
+const MENUS: MenuDef[] = [
+  {
+    id: ITEM_MENU,
+    menu: pref.group('', {
+      state: pref.group('', {
+        read: pref.action('item.read'),
+        pin: pref.action('item.pin'),
+        archive: pref.action('item.archive'),
+      }),
+      copy: pref.group('', { cite: pref.action('item.cite') }),
+      wrong: pref.group('', { misfile: pref.action('item.misfile') }),
+    }),
+  },
+];
+
 /** The page's keys, as named commands, so the shortcut sheet lists each one. */
 export function useInboxKeys({
   current,
@@ -34,6 +52,7 @@ export function useInboxKeys({
   cite,
   box,
 }: Inbox) {
+  useMenus(MENUS);
   const group = 'Inbox';
   useCommand('inbox.next', 'Next item', () => move(1), {
     group,
