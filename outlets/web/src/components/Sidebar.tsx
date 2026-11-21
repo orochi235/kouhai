@@ -129,10 +129,10 @@ export function Sidebar({
             Preferences
           </button>
         </p>
-        <p className="keys">
+        <div className="keys">
           {/* A debugging aid: flips the page between schemes without changing the system's. */}
           <ColorModeControl size="sm" value={scheme.preference} onChange={scheme.setPreference} />
-        </p>
+        </div>
         {offline && <p className="offline">The daemon is not answering on :8771</p>}
       </footer>
     </nav>
