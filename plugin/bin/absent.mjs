@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline';
 
 const INSTRUCTIONS =
   'kouhai is not installed on this machine, so nothing can be filed. ' +
-  'To install: clone orochi235/kouhai to ~/src/kouhai, then `npm install && npm run build && npm run service:install` there.';
+  'To install: `brew install orochi235/tap/kouhai && brew services start kouhai`.';
 
 for await (const line of createInterface({ input: process.stdin })) {
   let msg;

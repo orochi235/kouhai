@@ -90,6 +90,15 @@ API. A browser outlet such as a stream overlay needs only the API:
 ## Install
 
 ```sh
+brew install orochi235/tap/kouhai
+brew services start kouhai        # the daemon, on :8771
+claude plugin marketplace add orochi235/kouhai
+claude plugin install kouhai@kouhai
+```
+
+From a checkout instead, which is how it is developed (a change to `src/` reaches hooks at once):
+
+```sh
 npm install && npm run build      # the page
 npm run service:install           # LaunchAgent dev.kouhai on :8771, and `kouhai` on PATH
 npm run menubar:install           # the menu bar item (perch)
