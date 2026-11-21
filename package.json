@@ -14,6 +14,7 @@
     "dev": "WEASEL=${WEASEL:-../weasel} vite outlets/web",
     "build": "WEASEL=${WEASEL:-../weasel} vite build outlets/web",
     "build:fleet": "scripts/build-page-fleet.sh",
+    "site": "node scripts/site.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p outlets/web",
     "lint": "biome check .",

@@ -8,6 +8,7 @@ const weasel = weaselCheckout();
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  define: { __KOUHAI_DEMO__: JSON.stringify(process.env.VITE_KOUHAI_DEMO === '1') },
   plugins: [react(), weaselIcons.vite({ mode: 'app' }), ...(weasel.plugins ?? [])],
   resolve: {
     alias: { '@core': fileURLToPath(new URL('../../src/engine', import.meta.url)) },

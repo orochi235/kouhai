@@ -3,3 +3,5 @@ dist/
 .DS_Store
 dist.next/
 dist.old/
+.playwright-mcp/
+_site/

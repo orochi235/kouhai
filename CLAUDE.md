@@ -18,7 +18,8 @@
   and `@weasel-js/*` in `outlets/web/tsconfig.json`), because its shortcut sheet is in no weasel release yet
   (2026-11-15). The pins stay on the published version. The page also imports `IconRegistryProvider` from
   `@weasel-js/icons/react`, where weasel moved it after 1.19.1 (2026-11-16). Once a release carries both, drop the
-  plugin, the tsconfig paths, and the `WEASEL=` in the `dev` and `build` scripts.
+  plugin, the tsconfig paths, the `WEASEL=` in the `dev` and `build` scripts, and the weasel checkout in
+  `.github/workflows/site.yml`.
   A page build that fails on a missing `@weasel-js` export means the checkout's `dist/` lags its source:
   run `npm run build` in `../weasel` (the whole workspace, in order), not one package at a time.
 - Claude Code runs a cached copy of `plugin/` (the hooks and the manifest), keyed on its version.

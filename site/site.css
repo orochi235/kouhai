@@ -1,0 +1,171 @@
+/* The page's own faces and paper, so the site and the demo it links to are plainly the same
+   object. The font files are copied out of node_modules by scripts/site.ts. */
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("./fonts/instrument-serif-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("./fonts/newsreader.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: block;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("./fonts/newsreader-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./fonts/ibm-plex-mono-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+  --paper: light-dark(#f4efe4, #1a1611);
+  --paper-sheet: light-dark(#fbf8f1, #211c16);
+  --ink: light-dark(#1c1712, #ece4d4);
+  --ink-soft: light-dark(#5c5246, #b3a68f);
+  --rule: light-dark(#d8ccb4, #3a3226);
+  --stamp: light-dark(#b0412e, #e2694e);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0 0.16 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper) var(--grain);
+  color: var(--ink);
+  font-family: "Newsreader", "Iowan Old Style", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 64ch;
+  margin: 0 auto;
+  padding: 12vh 16px 16vh;
+}
+
+h1 {
+  font-family: "Instrument Serif", "Iowan Old Style", serif;
+  font-weight: 400;
+  font-size: clamp(3rem, 12vw, 4.6rem);
+  line-height: 1;
+  margin: 0;
+}
+
+.kicker {
+  margin: 0.3rem 0 0;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+h2 {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 400;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  margin: 0 0 0.6rem;
+}
+
+.lede {
+  font-size: 1.2rem;
+  margin: 1.6rem 0 1.8rem;
+}
+
+section {
+  margin-top: 3.2rem;
+  padding-top: 1.6rem;
+  border-top: 1px dashed var(--rule);
+}
+
+code,
+pre {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.82em;
+}
+
+pre {
+  background: var(--paper-sheet);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--stamp);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 1.6rem 0 0.8rem;
+}
+
+.button {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 9px 16px;
+  border: 1.5px solid var(--stamp);
+  border-radius: 2px;
+  background: var(--stamp);
+  color: var(--paper-sheet);
+}
+
+.button--quiet {
+  background: none;
+  color: var(--stamp);
+}
+
+.note {
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+th {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 400;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+code,
+td:first-child {
+  white-space: nowrap;
+}

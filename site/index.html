@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>kouhai</title>
+    <meta
+      name="description"
+      content="A ledger of what Claude Code sessions owe you: the questions you asked them, and the instructions they haven't carried out yet."
+    />
+    <link rel="preload" href="./fonts/instrument-serif-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='12' fill='none' stroke='%23b0412e' stroke-width='3'/><circle cx='16' cy='16' r='5' fill='%23b0412e'/></svg>"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>kouhai</h1>
+        <p class="kicker">what your agents owe you</p>
+        <p class="lede">
+          Ask a Claude Code session something in the middle of a task and the answer scrolls away
+          with the task. kouhai keeps a ledger of the questions you ask and the instructions a
+          session hasn't carried out yet. Each one stays <em>owed</em> until the agent settles it
+          with a note you can read later, away from the chat.
+        </p>
+        <pre><code>brew install orochi235/tap/kouhai
+brew services start kouhai
+claude plugin marketplace add orochi235/kouhai
+claude plugin install kouhai@kouhai</code></pre>
+        <p class="actions">
+          <a class="button" href="./demo/">Try the demo</a>
+          <a class="button button--quiet" href="https://github.com/orochi235/kouhai">Source</a>
+        </p>
+        <p class="note">
+          The demo is the real page over a made-up ledger, with nothing behind it. A few items arrive
+          and get settled while you watch, and the controls work, but only on your copy in that tab.
+        </p>
+      </header>
+
+      <section>
+        <h2>What gets filed</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Filed when</th>
+              <th>Settled as</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>q-17</code> question</td>
+              <td>you ask the agent something directly</td>
+              <td>answered, dropped, deferred</td>
+            </tr>
+            <tr>
+              <td><code>t-18</code> task</td>
+              <td>you give an instruction it won't finish this turn</td>
+              <td>done, dropped, deferred</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          The agent files each item with a short slug, so <code>#cost-of-slugs</code> works as well
+          as <code>q-17</code> in a later prompt. An instruction it carries out in the same turn isn't
+          filed. <em>Deferred</em> means moved to a TODO entry or an issue, and the note says where.
+          Claude still answers in chat as usual. The ledger is the copy that stays.
+        </p>
+      </section>
+
+      <section>
+        <h2>Reading it</h2>
+        <p>
+          The page sorts the ledger by repo, in each repo's own colors. An answer leads with a
+          one-sentence verdict, then a note that can carry code, tables and diagrams. It says
+          whether the answer was measured, read from the code or only inferred, and the page flags
+          it once a file it cites has changed. A follow-up question nests under the answer it
+          follows. The next session in a repo is told what is still owed there.
+        </p>
+      </section>
+
+      <section>
+        <h2>How it is put together</h2>
+        <p>
+          A Claude Code plugin gives the agent the filing rule on every prompt and two MCP tools,
+          <code>take</code> and <code>settle</code>. Its hooks write straight to a local SQLite file,
+          so nothing is lost when the page isn't running. A small Node daemon serves the page and
+          pushes each change to it. The page is React, laid out with
+          <a href="https://github.com/orochi235/windease">windease</a>, and the menu bar item is made
+          with <a href="https://github.com/orochi235/perch">perch</a>.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

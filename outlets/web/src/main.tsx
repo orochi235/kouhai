@@ -13,6 +13,9 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
 import { syncLedgerPrefs } from './prefs.ts';
 
+// A build-time literal, so the ordinary bundle drops the demo and its sample ledger.
+if (__KOUHAI_DEMO__) await import('./demo/install.ts');
+
 syncLedgerPrefs();
 
 createRoot(document.getElementById('root') as HTMLElement).render(
