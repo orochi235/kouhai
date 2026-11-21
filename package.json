@@ -1,6 +1,6 @@
 {
   "name": "kouhai",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "A ledger of what Claude Code sessions owe you: questions and pending instructions",
   "type": "module",
