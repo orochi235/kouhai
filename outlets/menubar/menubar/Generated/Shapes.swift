@@ -2,7 +2,7 @@
 
 import Foundation
 
-struct MData: Decodable {
+struct MData: Decodable, Equatable, Blank {
     var title: String = ""
     var unread: Int = 0
     var owed: Int = 0
@@ -35,7 +35,7 @@ struct MData: Decodable {
     }
 }
 
-struct MDataRows: Decodable {
+struct MDataRows: Decodable, Equatable, Blank {
     var id: String = ""
     var text: String = ""
     var repo: String = ""
@@ -59,7 +59,7 @@ struct MDataRows: Decodable {
     }
 }
 
-struct MDataOwedRows: Decodable {
+struct MDataOwedRows: Decodable, Equatable, Blank {
     var id: String = ""
     var text: String = ""
     var repo: String = ""
