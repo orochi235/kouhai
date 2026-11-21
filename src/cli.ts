@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { menubar } from '../outlets/menubar/outlet.ts';
 import { web } from '../outlets/web/outlet.ts';
+import type { Route } from './adapters/adapter.ts';
+import { loadRoutes } from './adapters/config.ts';
 import { asideOf, fileAside } from './capture/aside.ts';
 import { configDirs, fileBtws } from './capture/btw.ts';
 import {
@@ -14,7 +16,7 @@ import {
 import { respond, serve } from './capture/mcp.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
 import { nameOf } from './engine/slug.ts';
-import { idOf, Store } from './engine/store.ts';
+import { Store } from './engine/store.ts';
 import { FILTERS, type Filter, type Item, KINDS, type Kind } from './engine/types.ts';
 import { runDaemon } from './server/server.ts';
 
@@ -59,13 +61,27 @@ function line(q: Item): string {
   return `${state} ${q.ref.padStart(6)}  ${(q.outcome ?? 'owed').padEnd(8)}  ${ago(q.settledAt ?? q.raisedAt).padStart(4)}  ${(q.repo ?? '-').padEnd(14)}  ${q.text}`;
 }
 
+/** The configured adapters, or null when their config is broken, so events wait for a fix. */
+function routesOrNull(): Route[] | null {
+  try {
+    return loadRoutes();
+  } catch (err) {
+    console.error(`adapters: ${(err as Error).message}; holding events until it is fixed`);
+    return null;
+  }
+}
+
 async function main(argv: string[]) {
   const [cmd, ...rest] = argv;
   switch (cmd) {
     case 'daemon':
-      return runDaemon([web, menubar], (store) => {
-        for (const dir of configDirs()) fileBtws(store, dir);
-      });
+      return runDaemon(
+        [web, menubar],
+        (store) => {
+          for (const dir of configDirs()) fileBtws(store, dir);
+        },
+        routesOrNull(),
+      );
     case 'mcp':
       return serve();
     case 'mcp-call': {
@@ -172,8 +188,10 @@ async function main(argv: string[]) {
       return;
     }
     case 'open': {
-      const id = rest[0] ? idOf(rest[0]) : null;
-      execFile('open', [`http://localhost:${port()}/${id ? `?q=q-${id}` : ''}`]);
+      const ref = rest[0]?.trim();
+      execFile('open', [
+        `http://localhost:${port()}/${ref ? `?q=${encodeURIComponent(ref)}` : ''}`,
+      ]);
       return;
     }
     case 'prune': {

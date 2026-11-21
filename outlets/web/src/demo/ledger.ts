@@ -81,6 +81,7 @@ export function itemOf(n: number, s: Seed, now: number): Item {
     root: `~/src/${s.repo}`,
     repo: s.repo,
     transcript: null,
+    external: [],
   };
 }
 

@@ -4,20 +4,22 @@ import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dropEnclosures, keep, keepNote } from './enclosures.ts';
 import { citesIn, headOf } from './git.ts';
+import { Outbox } from './outbox.ts';
 import { ARCHIVE_TTL_MS, dbPath, SESSION_IDLE_MS, TURN_TTL_MS } from './paths.ts';
+import { RefScheme, requireRefFormat } from './refs.ts';
+import { type Row, toItem, WHERE } from './rows.ts';
 import { migrate, REVISION } from './schema.ts';
 import { slugOf, slugRef } from './slug.ts';
-import { HAS_TAG, ITEM_COLUMNS, Tags, tagNames } from './tags.ts';
+import { HAS_TAG, ITEM_COLUMNS, Tags } from './tags.ts';
 import {
   type Attachment,
-  type Basis,
   type Context,
+  type External,
   type Filter,
   type Item,
   type Kind,
   OUTCOMES,
   type Outcome,
-  type Scope,
   SETTINGS,
   type Settings,
   type Settlement,
@@ -25,72 +27,18 @@ import {
   type Via,
 } from './types.ts';
 
-type Row = Record<string, string | number | null>;
-
 const PROMPT_CAP = 4000;
 
-export const refOf = (kind: Kind, id: number) => `${kind === 'task' ? 't' : 'q'}-${id}`;
-
-/** `q-17`, `t-17`, and `17` all name item 17. */
-export function idOf(ref: string | number): number | null {
-  if (typeof ref === 'number') return Number.isInteger(ref) ? ref : null;
-  const m = /^(?:[qt]-)?(\d+)$/.exec(ref.trim());
-  return m ? Number(m[1]) : null;
-}
-
-function toItem(r: Row): Item {
-  const n = (k: string) => (r[k] == null ? null : Number(r[k]));
-  const s = (k: string) => (r[k] == null ? null : String(r[k]));
-  const kind = (r.kind === 'task' ? 'task' : 'question') as Kind;
-  return {
-    id: Number(r.id),
-    ref: refOf(kind, Number(r.id)),
-    slug: s('slug'),
-    kind,
-    text: String(r.text),
-    outcome: s('outcome') as Outcome | null,
-    note: s('note'),
-    verdict: s('verdict'),
-    basis: s('basis') as Basis | null,
-    scope: s('scope') as Scope | null,
-    head: s('head'),
-    cites: JSON.parse(String(r.cites ?? '[]')) as string[],
-    via: s('via') as Via | null,
-    usage: r.usage == null ? null : (JSON.parse(String(r.usage)) as Record<string, unknown>),
-    attachments: JSON.parse(String(r.attachments ?? '[]')) as Attachment[],
-    session: s('session'),
-    harness: s('harness'),
-    cwd: s('cwd'),
-    root: s('root'),
-    repo: s('repo'),
-    transcript: s('transcript'),
-    prompt: s('prompt'),
-    raisedAt: Number(r.raised_at),
-    settledAt: n('settled_at'),
-    readAt: n('read_at'),
-    archivedAt: n('archived_at'),
-    pinned: Boolean(r.pinned),
-    updatedAt: Number(r.updated_at),
-    parent: s('parent'),
-    misfiledAt: n('misfiled_at'),
-    misfiledWhy: s('misfiled_why'),
-    tags: tagNames(r.tag_names),
-  };
-}
-
-const WHERE: Record<Filter, string> = {
-  inbox: 'archived_at IS NULL',
-  owed: 'archived_at IS NULL AND outcome IS NULL',
-  unread: 'archived_at IS NULL AND outcome IS NOT NULL AND read_at IS NULL',
-  pinned: 'pinned = 1',
-  archived: 'archived_at IS NOT NULL',
-  all: '1 = 1',
-};
+/** Settings that need more than a type check, each validating and returning the value it stores. */
+const CHECKS: Partial<Record<keyof Settings, (v: unknown) => unknown>> = { refs: requireRefFormat };
 
 export class Store {
   db: DatabaseSync;
   now: () => number;
   tags: Tags;
+  outbox: Outbox;
+  /** How refs are written and read, from the `refs` setting. */
+  refs: RefScheme;
 
   constructor(path = dbPath(), now: () => number = Date.now) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
@@ -100,12 +48,31 @@ export class Store {
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;');
     migrate(this.db);
     this.tags = new Tags(this.db, now);
+    this.outbox = new Outbox(this.db, now);
     this.db.exec(REVISION);
+    this.refs = new RefScheme(this.settings().refs);
+  }
+
+  private toItem = (r: Row) => toItem(r, this.refs);
+
+  /** Runs `fn` in one transaction, so an item and its outbox event are written together or not at all. */
+  private atomically<T>(fn: () => T): T {
+    // Inside a caller's transaction (`advance` files /btw items in one), its commit covers this.
+    if (this.db.isTransaction) return fn();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = fn();
+      this.db.exec('COMMIT');
+      return out;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
   }
 
   /** The id a ref names: `q-17`, `17`, `#cost-of-slugs`, or `cost-of-slugs`. */
   private idFor(ref: string | number): number | null {
-    const id = idOf(ref);
+    const id = this.refs.idOf(ref);
     if (id != null || typeof ref === 'number') return id;
     const slug = slugRef(ref);
     if (!slug) return null;
@@ -116,7 +83,7 @@ export class Store {
   /** `slug` as given, or with `-2`, `-3`… when another item already holds it. */
   private freeSlug(raw: string | null | undefined): string | null {
     const base = raw ? slugOf(raw) : null;
-    if (!base) return null;
+    if (!base || this.refs.idOf(base) != null) return null;
     const taken = this.db.prepare('SELECT 1 FROM items WHERE slug = ?');
     for (let n = 1; ; n++) {
       const slug = n === 1 ? base : `${base}-${n}`;
@@ -193,30 +160,33 @@ export class Store {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const out: Item[] = [];
-    for (const { kind, text, parent, slug, via } of items) {
-      const t = text.trim();
-      if (!t) continue;
-      const p = parent ? this.get(parent) : null;
-      if (parent && !p?.outcome) throw new Error(`parent ${parent} is not a settled item`);
-      const { lastInsertRowid } = insert.run(
-        turn?.id ?? null,
-        ctx.session,
-        ctx.harness,
-        ctx.cwd,
-        ctx.root,
-        ctx.repo,
-        ctx.transcript,
-        turn?.prompt ?? null,
-        kind,
-        t,
-        at,
-        at,
-        p?.ref ?? null,
-        this.freeSlug(slug),
-        via ?? null,
-      );
-      out.push(this.get(Number(lastInsertRowid)) as Item);
-    }
+    this.atomically(() => {
+      for (const { kind, text, parent, slug, via } of items) {
+        const t = text.trim();
+        if (!t) continue;
+        const p = parent ? this.get(parent) : null;
+        if (parent && !p?.outcome) throw new Error(`parent ${parent} is not a settled item`);
+        const { lastInsertRowid } = insert.run(
+          turn?.id ?? null,
+          ctx.session,
+          ctx.harness,
+          ctx.cwd,
+          ctx.root,
+          ctx.repo,
+          ctx.transcript,
+          turn?.prompt ?? null,
+          kind,
+          t,
+          at,
+          at,
+          p?.ref ?? null,
+          this.freeSlug(slug),
+          via ?? null,
+        );
+        this.outbox.add(Number(lastInsertRowid), 'filed');
+        out.push(this.get(Number(lastInsertRowid)) as Item);
+      }
+    });
     return out;
   }
 
@@ -245,26 +215,29 @@ export class Store {
     const at = this.now();
     const kept = keepNote(item.id, note);
     const archive = outcome === 'done' && !item.pinned && this.settings().archiveDone;
-    this.db
-      .prepare(
-        `UPDATE items SET outcome = ?, note = ?, attachments = ?, verdict = ?, basis = ?, scope = ?, head = ?, cites = ?,
+    this.atomically(() => {
+      this.db
+        .prepare(
+          `UPDATE items SET outcome = ?, note = ?, attachments = ?, verdict = ?, basis = ?, scope = ?, head = ?, cites = ?,
          usage = ?, settled_at = ?, read_at = NULL, archived_at = ?, updated_at = ? WHERE id = ?`,
-      )
-      .run(
-        outcome,
-        kept,
-        JSON.stringify(merged),
-        extra.verdict?.trim() || null,
-        extra.basis ?? null,
-        extra.scope ?? null,
-        item.root ? headOf(item.root) : null,
-        JSON.stringify(item.root ? citesIn(kept, item.root) : []),
-        usage ? JSON.stringify(usage) : null,
-        at,
-        archive ? at : null,
-        at,
-        item.id,
-      );
+        )
+        .run(
+          outcome,
+          kept,
+          JSON.stringify(merged),
+          extra.verdict?.trim() || null,
+          extra.basis ?? null,
+          extra.scope ?? null,
+          item.root ? headOf(item.root) : null,
+          JSON.stringify(item.root ? citesIn(kept, item.root) : []),
+          usage ? JSON.stringify(usage) : null,
+          at,
+          archive ? at : null,
+          at,
+          item.id,
+        );
+      this.outbox.add(item.id, 'settled');
+    });
     return this.get(item.id);
   }
 
@@ -284,12 +257,25 @@ export class Store {
     if (!Object.hasOwn(SETTINGS, key)) throw new Error(`no setting ${key}`);
     const want = typeof SETTINGS[key as keyof Settings];
     if (typeof value !== want) throw new Error(`${key} is a ${want}`);
+    const stored = CHECKS[key as keyof Settings]?.(value) ?? value;
     this.db
       .prepare(
         'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
       )
-      .run(key, JSON.stringify(value));
-    return this.settings();
+      .run(key, JSON.stringify(stored));
+    const settings = this.settings();
+    this.refs = new RefScheme(settings.refs);
+    return settings;
+  }
+
+  /** Records where an adapter keeps the item, replacing what that adapter recorded before. */
+  setExternal(id: number, at: External) {
+    const item = this.get(id);
+    if (!item) return;
+    const external = [...item.external.filter((e) => e.adapter !== at.adapter), at];
+    this.db
+      .prepare('UPDATE items SET external = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(external), this.now(), id);
   }
 
   get(ref: string | number): Item | null {
@@ -298,7 +284,7 @@ export class Store {
     const r = this.db.prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE id = ?`).get(id) as
       | Row
       | undefined;
-    return r ? toItem(r) : null;
+    return r ? this.toItem(r) : null;
   }
 
   list(
@@ -339,7 +325,7 @@ export class Store {
         `SELECT ${ITEM_COLUMNS} FROM items WHERE ${where.join(' AND ')} ORDER BY COALESCE(settled_at, raised_at) DESC LIMIT ${opts.limit ?? 500}`,
       )
       .all(...args) as Row[];
-    return rows.map(toItem);
+    return rows.map(this.toItem);
   }
 
   private flag(ref: string | number, column: 'read_at' | 'archived_at', on: boolean) {
@@ -398,7 +384,7 @@ export class Store {
         `SELECT ${ITEM_COLUMNS} FROM items WHERE misfiled_at IS NOT NULL ORDER BY misfiled_at DESC LIMIT ?`,
       )
       .all(limit) as Row[];
-    return rows.map(toItem);
+    return rows.map(this.toItem);
   }
 
   /** Marks every unread item read; returns their refs, so the page can mark them unread again. */
@@ -409,7 +395,7 @@ export class Store {
         `UPDATE items SET read_at = ?, updated_at = ? WHERE ${WHERE.unread} RETURNING id, kind`,
       )
       .all(at, at) as Row[];
-    return rows.map((r) => refOf(r.kind as Kind, Number(r.id)));
+    return rows.map((r) => this.refs.refOf(r.kind as Kind, Number(r.id)));
   }
 
   /** When this session's latest turn began, or null for a session with no turns yet. */
@@ -427,7 +413,7 @@ export class Store {
         `SELECT ${ITEM_COLUMNS} FROM items WHERE session = ? AND outcome IS NOT NULL AND settled_at >= ? ORDER BY id`,
       )
       .all(session, since) as Row[];
-    return rows.map(toItem);
+    return rows.map(this.toItem);
   }
 
   /**
@@ -445,7 +431,7 @@ export class Store {
          AND archived_at IS NULL AND pinned = 0 AND ${where} RETURNING id, kind`,
       )
       .all(at, at, session ?? at - idleMs) as Row[];
-    return rows.map((r) => refOf(r.kind as Kind, Number(r.id)));
+    return rows.map((r) => this.refs.refOf(r.kind as Kind, Number(r.id)));
   }
 
   /** Whether this session opened a turn for a prompt, so its message reached the filing rule. */
@@ -524,6 +510,7 @@ export class Store {
       .run(now - TURN_TTL_MS);
     this.db.prepare('DELETE FROM chased WHERE at < ?').run(now - TURN_TTL_MS);
     this.tags.prune();
+    this.outbox.prune();
     return { items: gone.length, turns: Number(t.changes) };
   }
 }

@@ -3,7 +3,8 @@ import hljs from 'highlight.js/lib/common';
 import { Marked, marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import { localImages } from './images.ts';
-import { itemRefs } from './itemRefs.ts';
+import { itemRefsFor } from './itemRefs.ts';
+import { refScheme } from './refs.ts';
 
 // A block names its language to be highlighted; an unnamed one stays plain, since guessing colors
 // prose and tables wrongly. Mermaid blocks are left for `drawDiagrams`.
@@ -15,7 +16,17 @@ const highlight = markedHighlight({
       : code,
 });
 
-const plain = new Marked(highlight, itemRefs);
+let built = refScheme();
+let itemRefs = itemRefsFor(built);
+let plain = new Marked(highlight, itemRefs);
+
+/** Rebuilds the ref links when the page has taken the ledger's ref format since the last render. */
+function follow() {
+  if (built === refScheme()) return;
+  built = refScheme();
+  itemRefs = itemRefsFor(built);
+  plain = new Marked(highlight, itemRefs);
+}
 
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A' && !node.hasAttribute('data-ref')) {
@@ -25,14 +36,16 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
 });
 
 /** A note as HTML; given the item's ref, its local images load from the daemon. */
-export const render = (md: string, ref?: string) =>
-  DOMPurify.sanitize(
+export const render = (md: string, ref?: string) => {
+  follow();
+  return DOMPurify.sanitize(
     // A per-call `walkTokens` would replace the highlighter's, so the image hook joins it in its own instance.
     (ref ? new Marked(highlight, itemRefs, { walkTokens: localImages(ref) }) : plain).parse(md, {
       async: false,
       gfm: true,
     }),
   );
+};
 
 const INLINE = { ALLOWED_TAGS: ['strong', 'em', 'code', 'del'], KEEP_CONTENT: true };
 

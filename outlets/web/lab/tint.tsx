@@ -28,6 +28,7 @@ type Config = ConfigOf<typeof config>;
 const item = (repo: string): Item => ({
   id: 1,
   ref: 'q-1',
+  external: [],
   slug: 'does-the-tint-read',
   kind: 'question',
   text: 'does the tint read?',

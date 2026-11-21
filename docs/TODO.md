@@ -1,5 +1,23 @@
 # kouhai — open work
 
+- **Try the Jira adapter against a real Jira site.** It landed 2026-11-21 tested only against a fake
+  REST server (`src/adapters/jira.test.ts`, and a daemon run against a stand-in on localhost). Point
+  `~/.kouhai/adapters.json` at a scratch project, file and settle one task, and check the issue, the
+  comment's formatting (`adf.ts` converts only paragraphs, fenced code, inline code, bold and links),
+  and the transition names that project's workflow really uses.
+
+- **A shared ledger, with per-repo numbering every collaborator agrees on.** Wanted, put off as more
+  than one person's use needs (2026-11-21); the adapter interface is the surface left for it. The
+  design talked through then: each user keeps a local SQLite replica; a hub (`kouhai hub`, one
+  container with Postgres, self-hosted first) holds accounts, repos, ref counters and shared items;
+  items get a ULID as their identity and a readable per-repo ref (`kouhai-41`) from a block of numbers
+  the hub leases to each machine, so capture still files offline; GitHub sign-in, with a repo's ledger
+  visible to whoever can see the repo; read, pinned, archived and misfiled kept per user; questions
+  private and tasks shared by default in a shared repo, set by a committed `.kouhai.json`; prompts,
+  transcript paths, `cwd` and token usage never leave the machine; adapters run on the hub, so a team
+  gets one Jira issue per item. Using Jira itself as the shared record was ruled out then: every
+  filter would become JQL and every hook a network call.
+
 - **Measure what `verdict`, `basis`, and `scope` cost on real sessions.** They landed 2026-11-17 with
   the `clear` tool and its per-turn rule removed. Fixed cost went from 3,258 to 3,986 characters of
   tool schemas (about +180 tokens per request); the dropped rule was about 376 characters, injected

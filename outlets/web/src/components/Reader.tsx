@@ -112,6 +112,20 @@ export function Reader({
                 <dd>{q.harness}</dd>
               </div>
             )}
+            {q.external.map((e) => (
+              <div key={e.adapter}>
+                <dt>{e.adapter}</dt>
+                <dd>
+                  {e.url ? (
+                    <a href={e.url} target="_blank" rel="noreferrer">
+                      {e.key}
+                    </a>
+                  ) : (
+                    e.key
+                  )}
+                </dd>
+              </div>
+            ))}
             <div>
               <dt>{q.kind === 'task' ? 'given' : 'asked'}</dt>
               <dd>{stamp(q.raisedAt)}</dd>

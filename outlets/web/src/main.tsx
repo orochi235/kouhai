@@ -11,12 +11,16 @@ import './weasel.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
+import { api } from './api.ts';
 import { syncLedgerPrefs } from './prefs.ts';
+import { setRefFormat } from './refs.ts';
 
 // A build-time literal, so the ordinary bundle drops the demo and its sample ledger.
 if (__KOUHAI_DEMO__) await import('./demo/install.ts');
 
-syncLedgerPrefs();
+const settings = await api.settings().catch(() => null);
+if (settings) setRefFormat(settings.refs);
+syncLedgerPrefs(settings);
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>

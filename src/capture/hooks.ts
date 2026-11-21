@@ -147,7 +147,7 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
 export function subagentStopHook(store: Store, p: Payload): HookOutput {
   const transcript = typeof p.agent_transcript_path === 'string' ? p.agent_transcript_path : null;
   if (!transcript) return null;
-  const owed = filedRefs(transcript)
+  const owed = filedRefs(transcript, store.refs)
     .map((ref) => store.get(ref))
     .filter((i): i is Item => Boolean(i && !i.outcome));
   if (!owed.length || !store.chaseOnce(`subagent:${p.agent_id ?? transcript}`)) return null;

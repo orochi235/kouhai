@@ -63,12 +63,13 @@ claude.ai refuses to be framed (`frame-ancestors 'self'`).
 
 ## Layers
 
-| Layer   | Where         | Job                                                                        |
-| ------- | ------------- | -------------------------------------------------------------------------- |
-| engine  | `src/engine`  | the ledger: items, turns, the store, repo summaries                        |
-| capture | `src/capture` | the Claude Code side: hooks and the MCP server, writing the store directly |
-| server  | `src/server`  | the HTTP API, a server-sent event stream, and outlet mounting              |
-| outlets | `outlets/*`   | ways of showing the ledger: `web` (the page at `/`) and `menubar`          |
+| Layer    | Where          | Job                                                                             |
+| -------- | -------------- | ------------------------------------------------------------------------------- |
+| engine   | `src/engine`   | the ledger: items, turns, the store, repo summaries                             |
+| capture  | `src/capture`  | the Claude Code side: hooks and the MCP server, writing the store directly      |
+| adapters | `src/adapters` | systems items are mirrored to as they are filed and settled, such as Jira       |
+| server   | `src/server`   | the HTTP API, a server-sent event stream, outlet mounting, and the outbox drain |
+| outlets  | `outlets/*`    | ways of showing the ledger: `web` (the page at `/`) and `menubar`               |
 
 An outlet is a module exporting an `Outlet` (`src/server/outlet.ts`), added to the list in
 `src/cli.ts`. It can serve built files at a mount point and add routes under
@@ -86,6 +87,54 @@ API. A browser outlet such as a stream overlay needs only the API:
 | `POST /api/misfile`                                            | `{ id, misfiled, why }`                                               |
 | `POST /api/tag`                                                | `{ id, tag, on }`; setting an unknown tag defines it                  |
 | `POST /api/tags`                                               | `{ action: rename \| color \| delete, name, to, color }`              |
+| `GET /api/settings`, `POST /api/settings`                      | the ledger's settings; `POST` takes any subset, such as `{ refs }`    |
+| `GET /api/outbox`                                              | adapter events not yet delivered, with their attempts and last error  |
+
+## Refs
+
+Each item's number is written by a template per kind, the `refs` setting, `q-{n}` and `t-{n}` by
+default. Change it with `POST /api/settings` and `{ "refs": { "question": "KQ-{n}", "task": "K-{n}" } }`:
+every item, old ones too, then shows under the new form. The default forms keep working wherever
+a ref is read (a prompt, a note, the CLI, a link), so nothing written before the change breaks. A
+template holds `{n}` once, among letters, digits, `.`, `_` and `-`. Numbering is one counter
+shared by every repo and both kinds.
+
+## Adapters
+
+An adapter mirrors the ledger into another system: it hears about each item as it is filed and
+as it is settled, and can record where it keeps the item there, which the page shows as a link.
+SQLite stays the record of what is owed. Capture writes each event to an outbox beside the item,
+and the daemon hands it to the adapters every few seconds, retrying a failure with backoff (30 s,
+doubling, up to 6 h) and giving up after 10 attempts; `GET /api/outbox` shows what is waiting.
+
+`~/.kouhai/adapters.json` lists them; with no file there is only `local`, which records nothing.
+Each entry can be narrowed to some `repos` and `kinds`. The daemon reads the file when it starts,
+and holds events (losing none) while the file doesn't parse.
+
+```json
+{
+  "adapters": [
+    {
+      "kind": "jira",
+      "site": "https://example.atlassian.net",
+      "project": "KOU",
+      "email": "you@example.com",
+      "token": { "command": "security find-generic-password -s jira-token -w" },
+      "repos": ["x-helm"],
+      "kinds": ["task"]
+    }
+  ]
+}
+```
+
+| Kind    | Filed                                                                                             | Settled                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `local` | nothing                                                                                           | nothing                                                                                                                                                      |
+| `jira`  | an issue (`issueType`, `Task` by default) in `project`, labeled `kouhai` and with the item's tags | a comment holding the note, then a move by `transitions` (outcome to transition or status name; `done` and `answered` go to `Done`, `dropped` to `Won't Do`) |
+
+A Jira `token` is `{ "env": "NAME" }` or `{ "command": "..." }`, read when the first request goes
+out. A new adapter is a module exporting a factory for the `Adapter` interface in
+`src/adapters/adapter.ts`, added to `FACTORIES` in `src/adapters/config.ts`.
 
 ## Install
 
@@ -128,7 +177,8 @@ kouhai prune
 `~/.kouhai/inbox.db`, SQLite in WAL mode, readable only by you. Attachments are stored as
 references, never copies. An archived item is deleted 180 days after it was archived, unless
 pinned. Turns and the record of chased mid-turn messages are deleted after two days. The daemon
-prunes on start and daily; `kouhai prune` does it now. The daemon logs to `~/.kouhai/daemon.log`.
+prunes on start and daily; `kouhai prune` does it now. An adapter event leaves the outbox once
+delivered; one given up on is deleted 30 days later. The daemon logs to `~/.kouhai/daemon.log`.
 
 `scripts/fixed-cost.ts` prints what kouhai adds to every request (its instructions and tool
 schemas) and to each turn; `scripts/token-cost.mjs <transcript>... --fixed $(scripts/fixed-cost.ts --chars)`

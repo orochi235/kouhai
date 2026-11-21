@@ -24,6 +24,7 @@ import { Sidebar } from './components/Sidebar.tsx';
 import { tagSheet } from './components/Tags.tsx';
 import { useInboxKeys } from './keys.ts';
 import { prefs } from './prefs.ts';
+import { refScheme } from './refs.ts';
 import { iconsOf, repoSheet } from './repoColors.ts';
 import { useListSelection } from './selection.ts';
 import { thread } from './thread.ts';
@@ -45,7 +46,7 @@ function Inbox() {
   const [filter, setFilter] = useState<Filter>('inbox');
   const [kind, setKind] = useState<Kind | null>(() => {
     const ref = initialRef();
-    return ref ? (ref.startsWith('t-') ? 'task' : 'question') : prefs.get('inbox.openOn');
+    return (ref && refScheme().kindOf(ref)) || prefs.get('inbox.openOn');
   });
   const [readOnOpen] = usePref(prefs, 'inbox.readOnOpen');
   const [sheet, setSheet] = useState(false);
@@ -194,6 +195,15 @@ function Inbox() {
     },
     [items, go],
   );
+
+  // A link to an item outside the opening list (archived, or the other kind) widens it once.
+  const linked = useRef(initialRef());
+  useEffect(() => {
+    const ref = linked.current;
+    if (!ref || !listing) return;
+    linked.current = null;
+    if (!items.some((q) => q.ref.toLowerCase() === ref.toLowerCase())) void open(ref);
+  }, [listing, items, open]);
 
   const box = useCallback((k: Kind) => {
     setFilter('inbox');

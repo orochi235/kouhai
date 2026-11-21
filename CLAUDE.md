@@ -6,6 +6,10 @@
   (the HTTP API and event stream) ← `outlets/*` (ways of showing it). An outlet reads the ledger
   only through the API or the read-only `Ledger` it is handed, and owns its own wording and look;
   nothing in `src/` decides how anything is shown. `src/cli.ts` is where outlets are plugged in.
+- `src/adapters` sits beside `src/capture`: it imports only the engine, and only the daemon calls it, through the
+  outbox (`src/engine/outbox.ts`). Capture never waits on an adapter. Keep the `Adapter` interface something both
+  `local` and `jira` implement naturally: Jira is there to keep it from fitting SQLite alone.
+- Refs are written and read only through `RefScheme` (`src/engine/refs.ts`), never with a `[qt]-\d+` pattern.
 - The filing rule Claude follows is written once, `RULE` in `src/capture/hooks.ts`; the prompt hook and the
   MCP server's instructions both use it. Change the rule there.
 - **Deployed from this checkout.** The plugin is only a shell: its hooks and MCP server run

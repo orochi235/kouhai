@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RefScheme } from '../engine/refs.ts';
 import { Store } from '../engine/store.ts';
 import { citations, refsIn } from './cite.ts';
 
@@ -31,6 +32,14 @@ describe('refsIn', () => {
       '#cost-of-slugs',
       '#fix-it-now',
     ]);
+  });
+
+  it('reads refs in the configured format beside the default one', () => {
+    const refs = new RefScheme({ question: 'KQ-{n}', task: 'K-{n}' });
+    expect(refsIn('see [KQ-7] and [[k-8](http://x)], also q-9 and K-10', refs)).toEqual({
+      cited: ['kq-7', 'k-8'],
+      mentioned: ['q-9', 'k-10'],
+    });
   });
 
   it('ignores pasted or quoted text and repeats', () => {

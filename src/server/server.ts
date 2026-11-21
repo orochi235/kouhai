@@ -2,6 +2,8 @@ import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import { extname } from 'node:path';
+import type { Route } from '../adapters/adapter.ts';
+import { drain } from '../adapters/drain.ts';
 import { staleCites } from '../engine/git.ts';
 import { port } from '../engine/paths.ts';
 import { repos } from '../engine/repos.ts';
@@ -15,6 +17,8 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** How often the server checks the store for changes to push; writers are other processes. */
 const WATCH_MS = 500;
+/** How often the outbox is checked for events due to adapters. */
+const DRAIN_MS = 5 * 1000;
 
 export class HttpError extends Error {
   status: number;
@@ -124,6 +128,7 @@ export function routes(store: Store): Record<string, Handler> {
         typeof b.why === 'string' ? b.why : null,
       ),
     'GET /api/settings': () => store.settings(),
+    'GET /api/outbox': () => store.outbox.waiting(),
     'POST /api/settings': (_q, b) =>
       asked(() => {
         for (const [key, value] of Object.entries(b)) store.setSetting(key, value);
@@ -251,9 +256,32 @@ export function createServer(store: Store, outlets: Outlet[] = []) {
   });
 }
 
-/** `sweep` runs every minute against the daemon's store: capture work no hook gets to do. */
-export function runDaemon(outlets: Outlet[], sweep?: (store: Store) => void): void {
+/**
+ * `sweep` runs every minute against the daemon's store: capture work no hook gets to do. `routes`
+ * are the adapters the outbox drains to; null, as when their config is broken, leaves it queued.
+ */
+export function runDaemon(
+  outlets: Outlet[],
+  sweep?: (store: Store) => void,
+  routes: Route[] | null = null,
+): void {
   const store = new Store();
+  if (routes) {
+    let busy = false;
+    const deliver = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        await drain(store, routes);
+      } catch (err) {
+        console.error(`outbox: ${(err as Error).message}`);
+      } finally {
+        busy = false;
+      }
+    };
+    deliver();
+    setInterval(deliver, DRAIN_MS).unref();
+  }
   if (sweep) {
     const run = () => {
       try {

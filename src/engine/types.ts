@@ -41,6 +41,8 @@ export const OUTCOMES: Record<Kind, Outcome[]> = {
 export const SETTINGS = {
   /** A task settled as done is archived as it settles, unless it is pinned. */
   archiveDone: true,
+  /** How refs are written; see `RefFormat` in `refs.ts`. */
+  refs: { question: 'q-{n}', task: 't-{n}' } as Record<Kind, string>,
 };
 export type Settings = typeof SETTINGS;
 
@@ -58,12 +60,15 @@ export const SCOPES: Scope[] = ['session', 'durable'];
  */
 export type Via = 'btw' | 'ask';
 
+/** Where an adapter recorded an item in its own system, such as a Jira issue. */
+export type External = { adapter: string; key: string; url: string | null };
+
 /** What a settlement says beyond its note. */
 export type Settlement = { verdict?: string | null; basis?: Basis | null; scope?: Scope | null };
 
 export type Item = Context & {
   id: number;
-  /** `q-17` for a question, `t-17` for a task; the number alone identifies it. */
+  /** `q-17` for a question, `t-17` for a task, or as the `refs` setting writes them; the number alone identifies it. */
   ref: string;
   /** A few words naming it, cited as `#cost-of-slugs`; null for items filed without one. */
   slug: string | null;
@@ -100,8 +105,11 @@ export type Item = Context & {
   /** When the user marked it as something that should never have been filed. */
   misfiledAt: number | null;
   /** Their reason, if they gave one. */
-  misfiledWhy: string | null /** The user's tags on it, by name. */;
+  misfiledWhy: string | null;
+  /** The user's tags on it, by name. */
   tags: string[];
+  /** Where adapters recorded it, one entry per adapter that keeps records of its own. */
+  external: External[];
 };
 
 /** A label the user defined; `count` is how many unarchived items carry it. */

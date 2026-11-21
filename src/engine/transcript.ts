@@ -1,4 +1,5 @@
 import { closeSync, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
+import { RefScheme } from './refs.ts';
 
 /** Enough of the transcript's end to hold the current turn. */
 const TAIL_BYTES = 4 * 1024 * 1024;
@@ -131,8 +132,9 @@ export function kouhaiTools(path: string): { names: string[]; failed: boolean } 
 }
 
 /** The refs `take` returned anywhere in a transcript, read from its tool results. */
-export function filedRefs(path: string): string[] {
-  const refs = new Set<string>();
+export function filedRefs(path: string, refs = new RefScheme()): string[] {
+  const line = new RegExp(`^${refs.source}(?![\\w-])`, 'gim');
+  const found = new Set<string>();
   for (const l of tail(path)) {
     const content = l.type === 'user' ? l.message?.content : null;
     if (!Array.isArray(content)) continue;
@@ -145,8 +147,8 @@ export function filedRefs(path: string): string[] {
             ? (c.content as { text?: unknown }[]).map((t) => String(t.text ?? '')).join('\n')
             : '';
       if (!/^Filed in the (?:kouhai|dixeram) ledger:/.test(body)) continue;
-      for (const m of body.matchAll(/^([qt]-\d+)\b/gm)) refs.add(m[1] as string);
+      for (const m of body.matchAll(line)) found.add(m[1] as string);
     }
   }
-  return [...refs];
+  return [...found];
 }

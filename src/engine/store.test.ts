@@ -69,7 +69,7 @@ describe('Store', () => {
     s.setSetting('archiveDone', false);
     s.settle('t-3', 'done', 'did c after all');
     expect(s.get('t-3')?.archivedAt).toBeNull();
-    expect(s.settings()).toEqual({ archiveDone: false });
+    expect(s.settings().archiveDone).toBe(false);
     expect(() => s.setSetting('archiveDone', 'yes')).toThrow(/boolean/);
     expect(() => s.setSetting('nope', true)).toThrow(/no setting/);
   });

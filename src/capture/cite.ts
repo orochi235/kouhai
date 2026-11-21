@@ -1,6 +1,7 @@
 import { ownWords } from '../engine/detect.ts';
 import { staleCites } from '../engine/git.ts';
-import { nameOf, REF, SLUG } from '../engine/slug.ts';
+import { RefScheme } from '../engine/refs.ts';
+import { nameOf, SLUG } from '../engine/slug.ts';
 import type { Store } from '../engine/store.ts';
 import type { Item } from '../engine/types.ts';
 
@@ -8,23 +9,25 @@ import type { Item } from '../engine/types.ts';
 const MAX_ITEMS = 10;
 const NOTE_CAP = 6000;
 
-/** `[q-17]`, or the `[[q-17](link)]` an answer ends with; `#slug` is cited too. */
-const CITED = /\[\[?([qt]-\d+)\]/gi;
-
 const unique = (refs: string[]) => [...new Set(refs.map((r) => r.toLowerCase()))];
 
 /**
  * The ids a prompt names in the user's own words: `cited` in brackets, which come in whole, and
  * `mentioned` bare, which the agent reads with `show` if it takes them for kouhai items.
  */
-export function refsIn(prompt: string): { cited: string[]; mentioned: string[] } {
+export function refsIn(
+  prompt: string,
+  refs = new RefScheme(),
+): { cited: string[]; mentioned: string[] } {
   const own = ownWords(prompt);
+  // `[q-17]`, or the `[[q-17](link)]` an answer ends with.
+  const CITED = new RegExp(`\\[\\[?${refs.source}\\]`, 'gi');
   // A `#slug` is cited wherever it stands: nothing else in a prompt looks like one.
   const cited = unique([
     ...[...own.matchAll(CITED)].map((m) => m[1] as string),
     ...[...own.matchAll(SLUG)].map((m) => `#${m[1]}`),
   ]);
-  const mentioned = unique([...own.matchAll(REF)].map((m) => m[1] as string)).filter(
+  const mentioned = unique([...own.matchAll(refs.inProse())].map((m) => m[1] as string)).filter(
     (r) => !cited.includes(r),
   );
   return { cited, mentioned };
@@ -59,7 +62,7 @@ const shownBefore = (store: Store, session: string | null, q: Item) =>
 
 /** What a prompt's ids add to its context, or null for a prompt naming none that exist. */
 export function citations(store: Store, prompt: string, session: string | null): string | null {
-  const { cited, mentioned } = refsIn(prompt);
+  const { cited, mentioned } = refsIn(prompt, store.refs);
   const found = cited.flatMap((ref) => store.get(ref) ?? []);
   const items = found.slice(0, MAX_ITEMS);
   const over = found.slice(MAX_ITEMS);

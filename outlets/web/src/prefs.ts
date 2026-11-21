@@ -1,4 +1,4 @@
-import { SETTINGS } from '@core/types.ts';
+import { SETTINGS, type Settings } from '@core/types.ts';
 import { openPrefsSync, type PrefGroup } from '@weasel-js/prefs';
 import { localStorageAdapter } from '@weasel-js/storage';
 import { api } from './api.ts';
@@ -48,14 +48,9 @@ export const prefs = openPrefsSync(PREFS, {
  * Mirrors the prefs the ledger keeps: takes the ledger's values on load, and sends each local change
  * back. The ledger's value is the one capture reads, so it wins.
  */
-export function syncLedgerPrefs() {
-  api
-    .settings()
-    .then((s) => {
-      if (prefs.get('inbox.archiveDone') !== s.archiveDone)
-        prefs.set('inbox.archiveDone', s.archiveDone);
-    })
-    .catch(() => {});
+export function syncLedgerPrefs(s: Settings | null) {
+  if (s && prefs.get('inbox.archiveDone') !== s.archiveDone)
+    prefs.set('inbox.archiveDone', s.archiveDone);
   return prefs.subscribe((changes) => {
     for (const c of changes)
       if (c.path === 'inbox.archiveDone' && typeof c.value === 'boolean')
