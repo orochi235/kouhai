@@ -6,9 +6,9 @@ cd "$(dirname "$0")/.."
 WEB=outlets/web
 rm -rf "$WEB/dist.next" "$WEB/dist.old"
 onto do --kind build --task kouhai-page \
-  --about "rebuild the weasel workspace, then the kouhai page against it" \
-  --expect 4m --out "$WEB/dist" --to "$WEB/dist.next" \
-  -- sh -c 'cd ../weasel && npm run build && cd - >/dev/null && npm run build'
+  --about "rebuild the kouhai page" \
+  --expect 1m --out "$WEB/dist" --to "$WEB/dist.next" \
+  -- npm run build
 [ -f "$WEB/dist.next/index.html" ] || { echo "build-page-fleet: no index.html came back" >&2; exit 1; }
 [ -d "$WEB/dist" ] && mv "$WEB/dist" "$WEB/dist.old"
 mv "$WEB/dist.next" "$WEB/dist"

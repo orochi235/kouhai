@@ -2,7 +2,7 @@ import { intentOf, type Selection, select } from '@weasel-js/select';
 import { useCallback, useMemo, useState } from 'react';
 
 /** A list's convention: Cmd/Ctrl toggles a row, Shift ranges from the anchor. */
-const POLICY = { mode: 'multi', toggle: ['meta', 'ctrl'], range: 'shift' } as const;
+const POLICY = { mode: 'multiple', toggle: ['meta', 'ctrl'], range: 'shift' } as const;
 
 export type Press = { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean };
 

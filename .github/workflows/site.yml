@@ -30,17 +30,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           path: kouhai
-      # The page builds against weasel's source until a weasel release carries what it uses.
-      - uses: actions/checkout@v7
-        with:
-          repository: orochi235/weasel
-          ref: 9c6ce8a015943176d6269305e5853dec2abf14ff
-          path: weasel
       - uses: actions/setup-node@v7
         with:
           node-version-file: kouhai/.nvmrc
-      - run: npm ci && npm run build
-        working-directory: weasel
       - run: npm ci && npm run site
         working-directory: kouhai
       - uses: actions/configure-pages@v6

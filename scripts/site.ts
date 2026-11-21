@@ -40,7 +40,7 @@ const built = spawnSync(
   ],
   {
     stdio: 'inherit',
-    env: { ...process.env, VITE_KOUHAI_DEMO: '1', WEASEL: process.env.WEASEL ?? '../weasel' },
+    env: { ...process.env, VITE_KOUHAI_DEMO: '1' },
   },
 );
 if (built.status !== 0) process.exit(built.status ?? 1);

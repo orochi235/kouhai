@@ -12,16 +12,8 @@
   `kouhai` from `~/.local/bin`, a link to `bin/kouhai` here, so a change to `src/` reaches
   hooks and new sessions at once. The daemon needs a restart:
   `launchctl kickstart -k gui/$(id -u)/dev.kouhai`. The page needs `npm run build:fleet`: it
-  builds weasel and the page on the fleet and swaps `dist/` in whole, because onto's fetch never
+  builds the page on the fleet and swaps `dist/` in whole, because onto's fetch never
   deletes and an `--out` straight into `dist/` leaves every old bundle behind.
-- **The page builds against the weasel checkout at `../weasel`** (`WEASEL=<checkout>`, `outlets/web/weasel.ts`,
-  and `@weasel-js/*` in `outlets/web/tsconfig.json`), because its shortcut sheet is in no weasel release yet
-  (2026-11-15). The pins stay on the published version. The page also imports `IconRegistryProvider` from
-  `@weasel-js/icons/react`, where weasel moved it after 1.19.1 (2026-11-16). Once a release carries both, drop the
-  plugin, the tsconfig paths, the `WEASEL=` in the `dev` and `build` scripts, and the weasel checkout in
-  `.github/workflows/site.yml`.
-  A page build that fails on a missing `@weasel-js` export means the checkout's `dist/` lags its source:
-  run `npm run build` in `../weasel` (the whole workspace, in order), not one package at a time.
 - Claude Code runs a cached copy of `plugin/` (the hooks and the manifest), keyed on its version.
   A change there lands only after bumping the version in `plugin/.claude-plugin/plugin.json` and
   `.claude-plugin/marketplace.json`, then `claude plugin update kouhai@kouhai` in each config

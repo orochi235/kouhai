@@ -113,7 +113,12 @@ export function MessageList({
                   {q.note ? (
                     <span className="a">
                       {q.kind === 'task' && q.outcome === 'done' && (
-                        <Icon name={icon('ui:check')} size={14} className="done" label="Done" />
+                        <Icon
+                          name={icon('ui:check')}
+                          size={14}
+                          className="done"
+                          aria-label="Done"
+                        />
                       )}
                       <span
                         dangerouslySetInnerHTML={{ __html: renderPreview(q.verdict ?? q.note) }}

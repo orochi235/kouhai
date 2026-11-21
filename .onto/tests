@@ -2,4 +2,3 @@ enlist: 6
 plugin: node
 runner: vitest
 run: node_modules/.bin/vitest run
-with: ../weasel
