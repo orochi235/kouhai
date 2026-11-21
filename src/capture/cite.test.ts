@@ -72,7 +72,7 @@ describe('citations', () => {
 
   it('points at a bare id without embedding it, and names one already shown as seen', () => {
     const s = store();
-    expect(citations(s, 'like q-2 said', 's9')).toContain("read it with dixeram's `show` tool");
+    expect(citations(s, 'like q-2 said', 's9')).toContain("read it with kouhai's `show` tool");
     expect(citations(s, 'like q-2 said', 's9')).not.toContain('how?');
     citations(s, '[q-1]', 's9');
     expect(citations(s, 'like q-1 said', 's9')).toContain('shown earlier');

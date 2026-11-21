@@ -1,10 +1,10 @@
-// Stand-in MCP server for a machine where dixeram is not installed: no tools, and
+// Stand-in MCP server for a machine where kouhai is not installed: no tools, and
 // instructions saying how to install it. Plain JS, since the cached plugin has no src/.
 import { createInterface } from 'node:readline';
 
 const INSTRUCTIONS =
-  'dixeram is not installed on this machine, so nothing can be filed. ' +
-  'To install: clone orochi235/dixeram to ~/src/dixeram, then `npm install && npm run build && npm run service:install` there.';
+  'kouhai is not installed on this machine, so nothing can be filed. ' +
+  'To install: clone orochi235/kouhai to ~/src/kouhai, then `npm install && npm run build && npm run service:install` there.';
 
 for await (const line of createInterface({ input: process.stdin })) {
   let msg;
@@ -19,7 +19,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       ? {
           protocolVersion: msg.params?.protocolVersion ?? '2025-06-18',
           capabilities: { tools: {} },
-          serverInfo: { name: 'dixeram', version: 'absent' },
+          serverInfo: { name: 'kouhai', version: 'absent' },
           instructions: INSTRUCTIONS,
         }
       : msg.method === 'tools/list'

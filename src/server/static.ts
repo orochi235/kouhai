@@ -22,7 +22,7 @@ export function serveStatic(dir: string, name: string, path: string, res: http.S
   }
   if (!existsSync(file)) {
     res.writeHead(503, { 'content-type': 'text/plain' });
-    res.end(`The ${name} outlet is not built: npm run build in ~/src/dixeram`);
+    res.end(`The ${name} outlet is not built: npm run build in ~/src/kouhai`);
     return;
   }
   res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });

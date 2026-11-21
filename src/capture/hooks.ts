@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
-import { dixeramTools, filedRefs, unledgeredMidTurn } from '../engine/transcript.ts';
+import { filedRefs, kouhaiTools, unledgeredMidTurn } from '../engine/transcript.ts';
 import type { Item } from '../engine/types.ts';
 import { btwRule, fileBtws, untoldBtws } from './btw.ts';
 import { citations } from './cite.ts';
@@ -18,14 +18,14 @@ const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…
 
 /** The filing rule, the same on every prompt and in the MCP server's instructions. */
 export const RULE =
-  'File with dixeram\'s `take`, giving each item a `slug`: every direct question the user asks (kind "question"), and every ' +
+  'File with kouhai\'s `take`, giving each item a `slug`: every direct question the user asks (kind "question"), and every ' +
   'instruction you won\'t finish this turn (kind "task": queued, for later, or arriving mid-turn). ' +
   "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
   'question about what to work on next; or one about how something works when answering leads into ' +
   'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
   'in one line what you filed, giving each id with its slug ("Filed q-17 #cost-of-slugs, t-18 #fix-the-build.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
   'rather than on a line of its own ("…last sentence. [q-17]"), the id a link to the item when `take` ' +
-  'or `settle` gives one; if `take` fails or is not among your tools, say so instead. A dixeram call ' +
+  'or `settle` gives one; if `take` fails or is not among your tools, say so instead. A kouhai call ' +
   'alone in a step costs an extra request, so pair them: file a question you answer without running ' +
   'anything already answered (`take` with `outcome` and `note`), call `take` beside your first other ' +
   "tool call, and `settle` beside your last when its note doesn't wait on that call.";
@@ -36,7 +36,7 @@ export const RULE =
  * in the MCP server's instructions.
  */
 export const REMINDER =
-  "File its direct questions and unfinished instructions by the filing rule in dixeram's server instructions.";
+  "File its direct questions and unfinished instructions by the filing rule in kouhai's server instructions.";
 
 /** What was settled last turn: parents a follow-up can name. */
 function lastTurnRule(settled: Item[]): string {
@@ -56,14 +56,14 @@ function missingTake(
   if (!session || !transcript) return null;
   const key = `no-take:${session}`;
   if (store.chased(key)) return null;
-  const tools = dixeramTools(transcript);
+  const tools = kouhaiTools(transcript);
   if (!tools || (!tools.failed && tools.names.includes('take'))) return null;
   store.chaseOnce(key);
   return tools.failed
-    ? "dixeram's MCP server failed to connect"
+    ? "kouhai's MCP server failed to connect"
     : tools.names.length
-      ? `dixeram's MCP server is out of date (it offers ${tools.names.join(', ')}, not take)`
-      : "dixeram's tools were removed from this session";
+      ? `kouhai's MCP server is out of date (it offers ${tools.names.join(', ')}, not take)`
+      : "kouhai's tools were removed from this session";
 }
 
 export function promptHook(store: Store, p: Payload, configDir?: string): HookOutput {
@@ -84,20 +84,20 @@ export function promptHook(store: Store, p: Payload, configDir?: string): HookOu
   const btws = ctx.session ? sideQuestions(store, ctx.session, configDir) : [];
   return {
     ...(broken
-      ? { systemMessage: `dixeram ✗ ${broken}: run /mcp and reconnect dixeram` }
+      ? { systemMessage: `kouhai ✗ ${broken}: run /mcp and reconnect kouhai` }
       : forced
-        ? { systemMessage: 'dixeram ▸ marked with ??, so Claude will file this as a question' }
+        ? { systemMessage: 'kouhai ▸ marked with ??, so Claude will file this as a question' }
         : {}),
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
       additionalContext:
-        `dixeram, turn "${turn.id}" (pass it to \`take\`). ` +
+        `kouhai, turn "${turn.id}" (pass it to \`take\`). ` +
         (forced
           ? 'The user marked this prompt with `??`: it asks at least one direct question, and they want it filed and answered in a note that stands on its own, even where the filing rule would skip it (a what-to-work-on-next question, say). '
           : '') +
         (since == null ? RULE : REMINDER) +
         (broken
-          ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect dixeram fixes it.`
+          ? ` Nothing can be filed this session: ${broken}. Tell the user so in one line, and that \`/mcp\` → reconnect kouhai fixes it.`
           : '') +
         (settled.length ? ` ${lastTurnRule(settled)}` : '') +
         (btws.length ? ` ${btwRule(btws)}` : '') +
@@ -123,9 +123,9 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
   const btws = sideQuestions(store, session, configDir);
   if (btws.length) {
     return {
-      systemMessage: `dixeram ▸ holding the turn open to file ${btws.length === 1 ? 'a /btw question' : `${btws.length} /btw questions`}`,
+      systemMessage: `kouhai ▸ holding the turn open to file ${btws.length === 1 ? 'a /btw question' : `${btws.length} /btw questions`}`,
       decision: 'block',
-      reason: `dixeram: ${btwRule(btws)} If that is all, end the turn without saying so.`,
+      reason: `kouhai: ${btwRule(btws)} If that is all, end the turn without saying so.`,
     };
   }
   const mid = unledgeredMidTurn(transcript)
@@ -134,9 +134,9 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
   if (!mid.length) return null;
   const one = mid.length === 1;
   return {
-    systemMessage: `dixeram ▸ holding the turn open to check ${mid.length} mid-turn ${one ? 'message' : 'messages'}`,
+    systemMessage: `kouhai ▸ holding the turn open to check ${mid.length} mid-turn ${one ? 'message' : 'messages'}`,
     decision: 'block',
-    reason: `dixeram: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. File any direct question or unfinished instruction in ${one ? 'it' : 'them'} with \`take\`. If there is nothing to file, end the turn without saying so.`,
+    reason: `kouhai: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. File any direct question or unfinished instruction in ${one ? 'it' : 'them'} with \`take\`. If there is nothing to file, end the turn without saying so.`,
   };
 }
 
@@ -154,7 +154,7 @@ export function subagentStopHook(store: Store, p: Payload): HookOutput {
   return {
     decision: 'block',
     reason:
-      `dixeram: you filed ${owed.map((i) => `${i.ref} ${quote(i.text, 60)}`).join('; ')}, still owed. ` +
+      `kouhai: you filed ${owed.map((i) => `${i.ref} ${quote(i.text, 60)}`).join('; ')}, still owed. ` +
       'Settle each you have finished with `settle`. For any you have not, say in your final report ' +
       'that it is still owed, with its id, so the agent that started you carries it.',
   };
@@ -191,14 +191,14 @@ export function sessionStartHook(store: Store, p: Payload, configDir?: string): 
   ];
   if (btws.length) badge.push(`${btws.length} /btw to answer`);
   return {
-    systemMessage: `dixeram ▸ this repo has ${badge.join(', ')}`,
+    systemMessage: `kouhai ▸ this repo has ${badge.join(', ')}`,
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
       additionalContext:
-        'dixeram:' +
+        'kouhai:' +
         (said.length
           ? ` in this repo, ${said.join('. ')}. Mention these in one line at the start of your ` +
-            'first reply (the ledger is `dixeram open`), then carry on. Owed items from other sessions ' +
+            'first reply (the ledger is `kouhai open`), then carry on. Owed items from other sessions ' +
             'are not yours unless the user hands them to you.'
           : '') +
         (btws.length

@@ -7,7 +7,7 @@ import { inkFor, repoClass } from '../src/repoColors.ts';
 
 /** Real projects' .hued colors (2026-11-16): dark, saturated, pale, and loud, to see where a tint breaks. */
 const SAMPLES = [
-  { repo: 'dixeram', background: '#331300', foreground: '#fed8ca', accent: '#ebaa19' },
+  { repo: 'kouhai', background: '#331300', foreground: '#fed8ca', accent: '#ebaa19' },
   { repo: 'colm', background: '#a50a22', foreground: '#e4e4e4', accent: '#efa319' },
   { repo: 'fiddy', background: '#086947', foreground: '#fff3e7', accent: '#e48b15' },
   { repo: 'beamos', background: '#9dcffd', foreground: '#000000', accent: '' },

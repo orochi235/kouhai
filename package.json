@@ -1,11 +1,11 @@
 {
-  "name": "dixeram",
+  "name": "kouhai",
   "version": "0.3.0",
   "private": true,
   "description": "A ledger of what Claude Code sessions owe you: questions and pending instructions",
   "type": "module",
   "bin": {
-    "dixeram": "bin/dixeram"
+    "kouhai": "bin/kouhai"
   },
   "engines": {
     "node": ">=24"

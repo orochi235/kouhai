@@ -1,5 +1,5 @@
 #!/bin/sh
-# The plugin's MCP server. Without `dixeram` on PATH, serve an empty one that says so,
+# The plugin's MCP server. Without `kouhai` on PATH, serve an empty one that says so,
 # rather than failing at every session start.
-command -v dixeram >/dev/null 2>&1 && exec dixeram mcp
+command -v kouhai >/dev/null 2>&1 && exec kouhai mcp
 exec node "$(dirname "$0")/absent.mjs"

@@ -26,7 +26,7 @@ const call = (name: string) => ({
 const toolResult = { type: 'user', message: { content: [{ type: 'tool_result' }] } };
 
 function file(lines: object[]) {
-  const p = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 't.jsonl');
+  const p = join(mkdtempSync(join(tmpdir(), 'kouhai-')), 't.jsonl');
   writeFileSync(p, `${lines.map((l) => JSON.stringify(l)).join('\n')}\n`);
   return p;
 }
@@ -48,7 +48,7 @@ describe('unledgeredMidTurn', () => {
     const p = file([
       prompt('b'),
       mid('do x', 'm1'),
-      call('mcp__plugin_dixeram_dixeram__take'),
+      call('mcp__plugin_kouhai_kouhai__take'),
       mid('and y', 'm2'),
     ]);
     expect(unledgeredMidTurn(p).map((m) => m.key)).toEqual(['m2']);

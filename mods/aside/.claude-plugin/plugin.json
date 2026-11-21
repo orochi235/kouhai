@@ -1,7 +1,7 @@
 {
-  "name": "dixeram-aside",
-  "version": "0.2.2",
-  "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in dixeram",
+  "name": "kouhai-aside",
+  "version": "0.3.0",
+  "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in kouhai",
   "license": "MIT",
   "author": {
     "name": "Michael Baker",

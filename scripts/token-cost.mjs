@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// What dixeram costs a session, from its transcript: the tokens dixeram adds to context (hook
+// What kouhai costs a session, from its transcript: the tokens kouhai adds to context (hook
 // injections, its tool calls and their results) and how many times every later API call re-reads
 // them. Tokens are estimated at 4 characters each; the session's own totals come from API usage.
 // Usage: scripts/token-cost.mjs <transcript.jsonl>... [--fixed <chars>]
@@ -12,7 +12,7 @@ const fixedChars = at >= 0 ? Number(args.splice(at, 2)[1]) : 0;
 const tok = (chars) => chars / 4;
 
 function measure(path) {
-  let live = 0; // estimated dixeram tokens in context now
+  let live = 0; // estimated kouhai tokens in context now
   let added = 0;
   let calls = 0;
   let reads = 0; // total context tokens over all calls
@@ -27,7 +27,7 @@ function measure(path) {
     if (d.type === 'system' && d.subtype === 'compact_boundary') live = 0;
     if (d.type === 'attachment' && d.attachment?.type === 'hook_additional_context') {
       for (const s of [d.attachment.content].flat())
-        if (typeof s === 'string' && s.startsWith('dixeram')) {
+        if (typeof s === 'string' && s.startsWith('kouhai')) {
           live += tok(s.length);
           added += tok(s.length);
         }
@@ -39,7 +39,7 @@ function measure(path) {
         if (!tools.has(d.message.id)) tools.set(d.message.id, []);
         tools.get(d.message.id).push(b.name);
       }
-      if (b.type === 'tool_use' && b.name?.includes('dixeram')) {
+      if (b.type === 'tool_use' && b.name?.includes('kouhai')) {
         dixTools.add(b.id);
         n = JSON.stringify(b.input).length + b.name.length;
       } else if (b.type === 'tool_result' && dixTools.has(b.tool_use_id)) {
@@ -61,12 +61,12 @@ function measure(path) {
       dixReads += live + tok(fixedChars);
     }
   }
-  // A call that used only dixeram's tools forced one more call, re-reading the whole context.
+  // A call that used only kouhai's tools forced one more call, re-reading the whole context.
   let trips = 0;
   let tripReads = 0;
   for (let i = 0; i + 1 < order.length; i++) {
     const names = tools.get(order[i][0]) ?? [];
-    if (names.length && names.every((n) => n.includes('dixeram'))) {
+    if (names.length && names.every((n) => n.includes('kouhai'))) {
       trips++;
       tripReads += order[i + 1][1];
     }
@@ -76,7 +76,7 @@ function measure(path) {
 
 const pad = (s, n) => String(s).padStart(n);
 console.log(
-  `${'calls'.padStart(6)} ${'context read'.padStart(13)} ${'dixeram read'.padStart(13)} ${'share'.padStart(6)} ${'added'.padStart(7)} ${'trips'.padStart(5)} ${'trip read'.padStart(11)} ${'trip share'.padStart(10)}  transcript`,
+  `${'calls'.padStart(6)} ${'context read'.padStart(13)} ${'kouhai read'.padStart(13)} ${'share'.padStart(6)} ${'added'.padStart(7)} ${'trips'.padStart(5)} ${'trip read'.padStart(11)} ${'trip share'.padStart(10)}  transcript`,
 );
 for (const p of args) {
   const m = measure(p);

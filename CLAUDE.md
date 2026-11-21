@@ -1,4 +1,4 @@
-# dixeram — agent pointers
+# kouhai — agent pointers
 
 - What it is and how it works: `README.md`. Open work: `docs/TODO.md`.
 - **Layers, and which way they may import:** `src/engine` (the ledger: store, types, context;
@@ -9,9 +9,9 @@
 - The filing rule Claude follows is written once, `RULE` in `src/capture/hooks.ts`; the prompt hook and the
   MCP server's instructions both use it. Change the rule there.
 - **Deployed from this checkout.** The plugin is only a shell: its hooks and MCP server run
-  `dixeram` from `~/.local/bin`, a link to `bin/dixeram` here, so a change to `src/` reaches
+  `kouhai` from `~/.local/bin`, a link to `bin/kouhai` here, so a change to `src/` reaches
   hooks and new sessions at once. The daemon needs a restart:
-  `launchctl kickstart -k gui/$(id -u)/dev.dixeram`. The page needs `npm run build:fleet`: it
+  `launchctl kickstart -k gui/$(id -u)/dev.kouhai`. The page needs `npm run build:fleet`: it
   builds weasel and the page on the fleet and swaps `dist/` in whole, because onto's fetch never
   deletes and an `--out` straight into `dist/` leaves every old bundle behind.
 - **The page builds against the weasel checkout at `../weasel`** (`WEASEL=<checkout>`, `outlets/web/weasel.ts`,
@@ -23,13 +23,13 @@
   run `npm run build` in `../weasel` (the whole workspace, in order), not one package at a time.
 - Claude Code runs a cached copy of `plugin/` (the hooks and the manifest), keyed on its version.
   A change there lands only after bumping the version in `plugin/.claude-plugin/plugin.json` and
-  `.claude-plugin/marketplace.json`, then `claude plugin update dixeram@dixeram` in each config
+  `.claude-plugin/marketplace.json`, then `claude plugin update kouhai@kouhai` in each config
   directory (`~/.claude`, `~/.claude-msb`, `~/.claude-pw`). Keep the plugin in its own
   directory: pointed at the repo root, every cached version copies `node_modules`.
 - `mods/aside/` is a Claude Code mod (a hooks module, not command hooks), listed in the marketplace as
-  `dixeram-aside`. Like `plugin/`, it runs from a cached copy: bump its version in
+  `kouhai-aside`. Like `plugin/`, it runs from a cached copy: bump its version in
   `mods/aside/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, then
-  `claude plugin update dixeram-aside@dixeram` in each config directory. Test it with `claude plugin test mods/aside`;
+  `claude plugin update kouhai-aside@kouhai` in each config directory. Test it with `claude plugin test mods/aside`;
   `claude plugin validate mods/aside` checks it the way the engine loads it. `/btw` is not available under `claude -p`,
   so whether the mod catches it can only be seen in an interactive session.
 - Capture never depends on the daemon: hooks and the MCP server write SQLite directly with
@@ -38,5 +38,9 @@
   namespaces outside `outlets/web/`.
 - After changing `outlets/menubar/menubar.yaml`, run `npm run menubar:install` with `PERCH` set to a perch built
   from `~/src/perch` (`go build -o <path> ./cmd/perch`); the released perch lacks `gutter`.
-- Point a test run at a scratch store with `DIXERAM_HOME=<dir>` (and `DIXERAM_PORT` for a second
+- Point a test run at a scratch store with `KOUHAI_HOME=<dir>` (and `KOUHAI_PORT` for a second
   daemon, which `npm run dev` then proxies to); never seed the real inbox.
+- **Renamed from dixeram (2026-11-21).** What still says dixeram does so on purpose: the page's localStorage keys
+  (so saved preferences survive), and the transcript patterns in `src/engine/transcript.ts` (sessions started before
+  the rename carry the old tool names). On the dev machine `~/src/dixeram`, `~/.dixeram` and `~/.local/bin/dixeram`
+  are links to the new names.

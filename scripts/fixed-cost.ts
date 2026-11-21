@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// What dixeram puts in every request's system prompt (the MCP server's instructions and tool
+// What kouhai puts in every request's system prompt (the MCP server's instructions and tool
 // schemas), and the first-turn rule, in characters and estimated tokens (4 characters each).
-// Run before and after a change to how dixeram talks to agents; pass `--chars` to feed
+// Run before and after a change to how kouhai talks to agents; pass `--chars` to feed
 // `token-cost.mjs --fixed`.
 import { REMINDER, RULE } from '../src/capture/hooks.ts';
 import { handle } from '../src/capture/mcp.ts';

@@ -76,7 +76,7 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("\(results.m.data.title)", nil))
     }
     if results.state_uninstalled {
-        menu.append(.item("The daemon is not installed — npm run service:install in ~/src/dixeram", nil))
+        menu.append(.item("The daemon is not installed — npm run service:install in ~/src/kouhai", nil))
     }
     if results.state_stopped {
         menu.append(.item("The daemon is installed but not loaded", nil))
@@ -107,9 +107,9 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("Mark all read", .post(url: "http://127.0.0.1:8771/api/read-all", body: "{}")))
     }
     if results.state_stopped && (results.daemon.installed && !(results.daemon.loaded)) {
-        menu.append(.item("Start the daemon", .agent(label: "dev.dixeram", plist: "~/Library/LaunchAgents/dev.dixeram.plist", verb: .start)))
+        menu.append(.item("Start the daemon", .agent(label: "dev.kouhai", plist: "~/Library/LaunchAgents/dev.kouhai.plist", verb: .start)))
     }
     menu.append(.separator)
-    menu.append(.item("Quit dixeram", .quit))
+    menu.append(.item("Quit kouhai", .quit))
     return tidy(menu)
 }

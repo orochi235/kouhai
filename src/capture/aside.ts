@@ -1,4 +1,4 @@
-// A side question the dixeram mod answered by forking the live session (/ask, or /btw it caught),
+// A side question the kouhai mod answered by forking the live session (/ask, or /btw it caught),
 // filed already settled so the answer outlives the overlay it was shown in.
 import { contextOf } from '../engine/context.ts';
 import type { Store } from '../engine/store.ts';

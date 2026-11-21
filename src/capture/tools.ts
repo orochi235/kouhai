@@ -76,7 +76,7 @@ export const TOOLS = [
             required: ['kind', 'text'],
           },
         },
-        turn: { type: 'string', description: 'The turn id from the dixeram hook.' },
+        turn: { type: 'string', description: 'The turn id from the kouhai hook.' },
       },
       required: ['items'],
     },
@@ -116,7 +116,7 @@ export const TOOLS = [
   {
     name: 'show',
     description:
-      'Read items by id or slug, question and answer, when the user mentions one (q-17, t-4, #cost-of-slugs) meaning a dixeram item.',
+      'Read items by id or slug, question and answer, when the user mentions one (q-17, t-4, #cost-of-slugs) meaning a kouhai item.',
     inputSchema: {
       type: 'object',
       properties: {

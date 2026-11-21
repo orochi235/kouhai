@@ -15,7 +15,7 @@ const unique = (refs: string[]) => [...new Set(refs.map((r) => r.toLowerCase()))
 
 /**
  * The ids a prompt names in the user's own words: `cited` in brackets, which come in whole, and
- * `mentioned` bare, which the agent reads with `show` if it takes them for dixeram items.
+ * `mentioned` bare, which the agent reads with `show` if it takes them for kouhai items.
  */
 export function refsIn(prompt: string): { cited: string[]; mentioned: string[] } {
   const own = ownWords(prompt);
@@ -36,7 +36,7 @@ export function itemText(q: Item, cap = Infinity): string {
   const note = !q.note
     ? '(none yet)'
     : q.note.length > cap
-      ? `${q.note.slice(0, cap)}… (cut at ${cap} of ${q.note.length} characters; dixeram's \`show\` tool returns all of it)`
+      ? `${q.note.slice(0, cap)}… (cut at ${cap} of ${q.note.length} characters; kouhai's \`show\` tool returns all of it)`
       : q.note;
   const stale = staleCites(q);
   return (
@@ -72,11 +72,11 @@ export function citations(store: Store, prompt: string, session: string | null):
   const unseen = [...over, ...named.filter((q) => !seen.includes(q))];
   const parts = [
     fresh.length &&
-      `The user cited ${fresh.length === 1 ? 'this dixeram item' : 'these dixeram items'}:\n\n${fresh.map((q) => itemText(q, NOTE_CAP)).join('\n\n')}`,
+      `The user cited ${fresh.length === 1 ? 'this kouhai item' : 'these kouhai items'}:\n\n${fresh.map((q) => itemText(q, NOTE_CAP)).join('\n\n')}`,
     seen.length &&
       `${seen.map((q) => q.ref).join(', ')}: shown earlier this session, unchanged since.`,
     unseen.length &&
-      `The prompt also names ${unseen.map((q) => q.ref).join(', ')}; if it means ${unseen.length === 1 ? 'that dixeram item' : 'those dixeram items'}, read ${unseen.length === 1 ? 'it' : 'them'} with dixeram's \`show\` tool.`,
+      `The prompt also names ${unseen.map((q) => q.ref).join(', ')}; if it means ${unseen.length === 1 ? 'that kouhai item' : 'those kouhai items'}, read ${unseen.length === 1 ? 'it' : 'them'} with kouhai's \`show\` tool.`,
   ].filter(Boolean);
   return parts.length ? parts.join('\n\n') : null;
 }

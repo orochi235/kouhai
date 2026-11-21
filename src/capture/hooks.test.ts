@@ -27,7 +27,7 @@ type Out = {
 };
 
 const transcript = (lines: object[]) => {
-  const p = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 't.jsonl');
+  const p = join(mkdtempSync(join(tmpdir(), 'kouhai-')), 't.jsonl');
   writeFileSync(p, lines.map((l) => JSON.stringify(l)).join('\n'));
   return p;
 };
@@ -136,7 +136,7 @@ describe('stopHook', () => {
   });
 
   it('blocks once for a mid-turn message the ledger never saw', () => {
-    const p = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 't.jsonl');
+    const p = join(mkdtempSync(join(tmpdir(), 'kouhai-')), 't.jsonl');
     writeFileSync(
       p,
       [
@@ -187,24 +187,24 @@ describe('promptHook when the tool it names is missing', () => {
 
   it('warns once when the server offers only the old tools', () => {
     const p = transcript([
-      delta(['mcp__plugin_dixeram_dixeram__ask', 'mcp__plugin_dixeram_dixeram__answer']),
+      delta(['mcp__plugin_kouhai_kouhai__ask', 'mcp__plugin_kouhai_kouhai__answer']),
     ]);
     const s = new Store(':memory:');
     const first = run(s, p);
-    expect(first.systemMessage).toMatch(/dixeram ✗ .*out of date.*\/mcp/);
+    expect(first.systemMessage).toMatch(/kouhai ✗ .*out of date.*\/mcp/);
     expect(first.hookSpecificOutput?.additionalContext).toContain('Nothing can be filed');
     expect(run(s, p).systemMessage).toBeUndefined();
   });
 
   it('warns when the server failed to connect', () => {
-    const p = transcript([delta([], [], ['plugin:dixeram:dixeram'])]);
+    const p = transcript([delta([], [], ['plugin:kouhai:kouhai'])]);
     expect(run(new Store(':memory:'), p).systemMessage).toMatch(/failed to connect/);
   });
 
   it('stays quiet once a reconnect brings take', () => {
     const p = transcript([
-      delta(['mcp__plugin_dixeram_dixeram__ask']),
-      delta(['mcp__plugin_dixeram_dixeram__take'], ['mcp__plugin_dixeram_dixeram__ask']),
+      delta(['mcp__plugin_kouhai_kouhai__ask']),
+      delta(['mcp__plugin_kouhai_kouhai__take'], ['mcp__plugin_kouhai_kouhai__ask']),
     ]);
     expect(run(new Store(':memory:'), p).systemMessage).toBeUndefined();
   });
@@ -218,7 +218,7 @@ describe('promptHook when the tool it names is missing', () => {
 describe('sessionStartHook', () => {
   it('names owed and unread items from this repo on startup only', () => {
     const s = new Store(':memory:');
-    const c = { ...ctx('old'), cwd: '/x/dixeram', root: '/x/dixeram', repo: 'dixeram' };
+    const c = { ...ctx('old'), cwd: '/x/kouhai', root: '/x/kouhai', repo: 'kouhai' };
     s.take(
       [
         { kind: 'question', text: 'why?' },
@@ -228,7 +228,7 @@ describe('sessionStartHook', () => {
       c,
     );
     s.settle('q-1', 'answered', 'because');
-    const p = { source: 'startup', cwd: '/x/dixeram' };
+    const p = { source: 'startup', cwd: '/x/kouhai' };
     const out = sessionStartHook(s, p) as Out;
     expect(out.hookSpecificOutput?.additionalContext).toContain('still owed: t-2');
     expect(out.hookSpecificOutput?.additionalContext).toContain('unread: q-1');

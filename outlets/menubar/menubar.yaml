@@ -1,10 +1,10 @@
-# The dixeram menu bar item: unread settled items, and what is still owed. `perch install`
+# The kouhai menu bar item: unread settled items, and what is still owed. `perch install`
 # from this directory builds it and hands it to launchd. Every line it shows is worded by the
 # daemon (src/menu.ts).
 
 app:
-  name: dixeram
-  id: dev.dixeram.menubar
+  name: kouhai
+  id: dev.kouhai.menubar
   icon: tray.full
   interval: 5s
   gutter: false
@@ -13,7 +13,7 @@ app:
 
 watch:
   daemon:
-    launchagent: dev.dixeram
+    launchagent: dev.kouhai
   m:
     http: http://127.0.0.1:8771/outlets/menubar/menu
     json: true
@@ -42,7 +42,7 @@ status:
 menu:
   - text: "{{m.data.title}}"
     when: up
-  - text: "The daemon is not installed — npm run service:install in ~/src/dixeram"
+  - text: "The daemon is not installed — npm run service:install in ~/src/kouhai"
     when: uninstalled
   - text: "The daemon is installed but not loaded"
     when: stopped
@@ -72,4 +72,4 @@ menu:
     when: stopped
     agent: daemon.start
   - separator
-  - { text: Quit dixeram, quit: true }
+  - { text: Quit kouhai, quit: true }

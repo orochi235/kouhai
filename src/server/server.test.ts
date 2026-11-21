@@ -56,7 +56,7 @@ describe('daemon', () => {
 
   it('serves an image the item attached or its note links, and nothing else', async () => {
     const { s, base } = await up();
-    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
+    const dir = mkdtempSync(join(tmpdir(), 'kouhai-'));
     const [shot, linked, other] = ['a.png', 'b.svg', 'c.png'].map((f) => join(dir, f));
     for (const f of [shot, linked, other]) writeFileSync(f as string, '<svg/>');
     s.take([{ kind: 'question', text: 'why?' }], null, ctx);

@@ -60,7 +60,7 @@ export function Sidebar({
     <nav className="sidebar">
       <header className="masthead">
         <span className="postmark" aria-hidden="true" />
-        <h1>dixeram</h1>
+        <h1>kouhai</h1>
         <p className="tagline">what your agents owe you</p>
       </header>
 

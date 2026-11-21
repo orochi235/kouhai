@@ -76,7 +76,7 @@ test('/btw shows the answer in a pane Escape closes, and prints nothing', async 
   });
   expect(JSON.parse(runs[0]?.stdin ?? '{}').via).toBe('btw');
   const ui = await $.ui.mount({
-    plugin: 'dixeram-aside',
+    plugin: 'kouhai-aside',
     component: 'Pane',
     requestId: 'aside',
     surface: 'terminal',
@@ -134,7 +134,7 @@ test('/ask says in words why a resumed session cannot answer yet', async ($, on)
   expect(out.text).toContain('once a turn has finished');
 });
 
-test('the answer still shows when dixeram cannot keep it', async ($, on) => {
+test('the answer still shows when kouhai cannot keep it', async ($, on) => {
   engine(on, ANSWER, { filed: { exitCode: 1, stdout: '', stderr: 'no store' } });
   await start($);
   const out = await $.command.run(typed('ask', 'which column?'));

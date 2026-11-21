@@ -1,9 +1,9 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-export const home = () => process.env.DIXERAM_HOME ?? join(homedir(), '.dixeram');
+export const home = () => process.env.KOUHAI_HOME ?? join(homedir(), '.kouhai');
 export const dbPath = () => join(home(), 'inbox.db');
-export const port = () => Number(process.env.DIXERAM_PORT ?? 8771);
+export const port = () => Number(process.env.KOUHAI_PORT ?? 8771);
 export const apiBase = () => `http://127.0.0.1:${port()}`;
 
 /** An archived answer is deleted this long after it was archived. */

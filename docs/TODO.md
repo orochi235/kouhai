@@ -1,4 +1,4 @@
-# dixeram — open work
+# kouhai — open work
 
 - **Measure what `verdict`, `basis`, and `scope` cost on real sessions.** They landed 2026-11-17 with
   the `clear` tool and its per-turn rule removed. Fixed cost went from 3,258 to 3,986 characters of
@@ -31,5 +31,5 @@
 
 - **Rename away from a name that reads as "dicks".** Favorite so far: _kouhai_ (the junior who keeps
   track for the senior); runners-up _slate_ and _chit_. Left for later (2026-11-16). The rename
-  touches the plugin and marketplace names, the `dev.dixeram` launchd label, `DIXERAM_HOME` and
-  `DIXERAM_PORT`, the `~/.local/bin` link, and every MCP tool prefix.
+  touches the plugin and marketplace names, the `dev.kouhai` launchd label, `KOUHAI_HOME` and
+  `KOUHAI_PORT`, the `~/.local/bin` link, and every MCP tool prefix.

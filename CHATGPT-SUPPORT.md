@@ -5,16 +5,16 @@ implemented or installed. Recheck linked product documentation when implementing
 
 ## Scope and order
 
-Dixeram tracks what an agent owes the user; it does not need to become an OpenAI
+Kouhai tracks what an agent owes the user; it does not need to become an OpenAI
 model client. Reuse the ledger and its `take`, `settle`, `clear`, and `owed` tools.
 
 Ship local Codex support first. Hosted ChatGPT Work is a separate integration,
 because it cannot run the same plugin lifecycle hooks.
 
-| Target | Reusable pieces | New work | Capture guarantee |
-| --- | --- | --- | --- |
-| Local Codex | SQLite ledger, stdio MCP relay, filing rule, outlets | Source identity, hook adapter, packaging, transcript recovery adapter, session reopening | Aim for Claude parity; verify mid-turn delivery and interruption behavior in a real client |
-| Hosted ChatGPT Work | Ledger operations and filing semantics | Reachable MCP service, authentication, explicit conversation context, plugin workflow | Tool-driven filing; no equivalent automatic plugin prompt/stop capture |
+| Target              | Reusable pieces                                      | New work                                                                                 | Capture guarantee                                                                          |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Local Codex         | SQLite ledger, stdio MCP relay, filing rule, outlets | Source identity, hook adapter, packaging, transcript recovery adapter, session reopening | Aim for Claude parity; verify mid-turn delivery and interruption behavior in a real client |
+| Hosted ChatGPT Work | Ledger operations and filing semantics               | Reachable MCP service, authentication, explicit conversation context, plugin workflow    | Tool-driven filing; no equivalent automatic plugin prompt/stop capture                     |
 
 Keep the existing layering: engine imports no capture or outlet code; capture
 writes SQLite directly; outlets own presentation. Local capture must still work
@@ -38,7 +38,7 @@ any schema migration. Namespace session identity by client so unrelated clients
 cannot share session-scoped queries accidentally.
 
 Bind hook-created turns and subsequent MCP calls explicitly. Passing the
-Dixeram turn id is already supported; do not assume an MCP server's working
+Kouhai turn id is already supported; do not assume an MCP server's working
 directory or inherited environment identifies the active conversation. Test
 simultaneous sessions and worktrees, including a reused MCP connection.
 
@@ -94,7 +94,7 @@ formats produce an observable limitation without crashing or inventing items.
 
 ## 4. Package and test the local integration
 
-Add a Codex-compatible plugin/configuration entry for `dixeram mcp` and the local
+Add a Codex-compatible plugin/configuration entry for `kouhai mcp` and the local
 hooks. Keep the Claude plugin working. Follow current OpenAI packaging guidance
 instead of assuming the Claude manifest is directly installable everywhere.
 Document installation, update/reload behavior, supported surfaces, and how to
@@ -104,7 +104,7 @@ Local Codex supports stdio MCP. This is the documented direct registration
 shape, not an installation already performed:
 
 ```sh
-codex mcp add dixeram -- dixeram mcp
+codex mcp add kouhai -- kouhai mcp
 ```
 
 MCP registration alone does not install the lifecycle hooks or establish correct
@@ -157,7 +157,7 @@ inbox without accessing another conversation's or user's context.
 
 ## Validation and rollout
 
-Use `DIXERAM_HOME` pointing at a scratch directory, and `DIXERAM_PORT` for any
+Use `KOUHAI_HOME` pointing at a scratch directory, and `KOUHAI_PORT` for any
 second daemon. Never seed the real inbox while testing.
 
 1. Add migration and context-isolation tests, preserving existing Claude rows.

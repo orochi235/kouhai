@@ -117,8 +117,8 @@ describe('Store', () => {
   });
 
   it('keeps its own copy of a transom attachment, and deletes it with the item', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
-    vi.stubEnv('DIXERAM_HOME', join(dir, 'home'));
+    const dir = mkdtempSync(join(tmpdir(), 'kouhai-'));
+    vi.stubEnv('KOUHAI_HOME', join(dir, 'home'));
     try {
       const shot = join(dir, 'shot.png');
       writeFileSync(shot, 'png');
@@ -144,8 +144,8 @@ describe('Store', () => {
   });
 
   it('points a note at its own copies of transom images', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'dixeram-'));
-    vi.stubEnv('DIXERAM_HOME', join(dir, 'home'));
+    const dir = mkdtempSync(join(tmpdir(), 'kouhai-'));
+    vi.stubEnv('KOUHAI_HOME', join(dir, 'home'));
     vi.stubEnv('HOME', dir);
     try {
       const shot = join(dir, 'transom', 'inbox', 'r', 'a.png');
@@ -179,7 +179,7 @@ describe('Store', () => {
   });
 
   it('migrates a v1 questions table into items, keeping ids', () => {
-    const path = join(mkdtempSync(join(tmpdir(), 'dixeram-')), 'inbox.db');
+    const path = join(mkdtempSync(join(tmpdir(), 'kouhai-')), 'inbox.db');
     const v1 = new DatabaseSync(path);
     v1.exec(`CREATE TABLE questions (id INTEGER PRIMARY KEY AUTOINCREMENT, turn TEXT, session TEXT, harness TEXT,
       cwd TEXT, root TEXT, repo TEXT, transcript TEXT, prompt TEXT, question TEXT NOT NULL, answer TEXT,

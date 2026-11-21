@@ -25,7 +25,7 @@ import { ALL_OUTCOMES, TOOLS } from './tools.ts';
 const VERSION = '0.4.0';
 
 const INSTRUCTIONS =
-  'dixeram is the ledger of what you owe the user, read later away from this chat; answer in chat ' +
+  'kouhai is the ledger of what you owe the user, read later away from this chat; answer in chat ' +
   `as usual too. ${RULE}`;
 
 const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -167,7 +167,7 @@ export function callTool(
       }
     });
     return text(
-      `Filed in the dixeram ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
+      `Filed in the kouhai ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
         'Tell the user in one line what you filed, naming each by id and slug as above' +
         (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
         (lines.some((l) => l.question)
@@ -228,7 +228,7 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
       return reply({
         protocolVersion: msg.params?.protocolVersion ?? '2025-06-18',
         capabilities: { tools: { listChanged: true } },
-        serverInfo: { name: 'dixeram', version: VERSION },
+        serverInfo: { name: 'kouhai', version: VERSION },
         instructions: instructions(store),
       });
     case 'ping':
@@ -241,7 +241,7 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
       try {
         return reply(callTool(store, fallback, name, args));
       } catch (err) {
-        return reply(text(`dixeram: ${(err as Error).message}`, true));
+        return reply(text(`kouhai: ${(err as Error).message}`, true));
       }
     }
     default:
@@ -284,7 +284,7 @@ export function relayReply(msg: Rpc, ran: Ran): string {
   const why = ran.error
     ? ran.error.message
     : `mcp-call exited ${ran.status ?? 'on a signal'}${ran.stderr?.trim() ? `: ${ran.stderr.trim().split('\n').slice(-3).join(' ')}` : ' with no reply'}`;
-  const message = `dixeram: ${why}`;
+  const message = `kouhai: ${why}`;
   return JSON.stringify(
     msg.method === 'tools/call'
       ? { jsonrpc: '2.0', id: msg.id, result: text(message, true) }
@@ -293,7 +293,7 @@ export function relayReply(msg: Rpc, ran: Ran): string {
 }
 
 /**
- * The long-lived server is only a relay: each request runs in a fresh `dixeram mcp-call`, so a
+ * The long-lived server is only a relay: each request runs in a fresh `kouhai mcp-call`, so a
  * session started before a change still gets current code, and is told when the tools change.
  */
 export function serve(): void {

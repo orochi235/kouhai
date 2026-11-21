@@ -170,7 +170,7 @@ describe('relay', () => {
         { stdout: null, status: null, error: new Error('spawnSync node ETIMEDOUT') },
       ),
     );
-    expect(out.error.message).toBe('dixeram: spawnSync node ETIMEDOUT');
+    expect(out.error.message).toBe('kouhai: spawnSync node ETIMEDOUT');
   });
 });
 

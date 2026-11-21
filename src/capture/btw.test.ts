@@ -8,7 +8,7 @@ import { promptHook, sessionStartHook, stopHook } from './hooks.ts';
 
 const dirs: string[] = [];
 function harness() {
-  const home = mkdtempSync(join(tmpdir(), 'dixeram-btw-'));
+  const home = mkdtempSync(join(tmpdir(), 'kouhai-btw-'));
   dirs.push(home);
   const dir = join(home, '.claude-test');
   mkdirSync(dir);

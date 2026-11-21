@@ -16,8 +16,8 @@ const STRATEGIES = { strip: stripStrategy as unknown as LayoutStrategy<unknown> 
 const STRIP = { axis: 'x', resizeMode: 'neighbor', fill: true };
 /** Each pane's share of the width as last dragged, by pane id; per browser. */
 const SHARES_KEY = 'dixeram.paneShares.v1';
-const ZONE = asNodeId('dixeram-panes');
-const idOf = (id: string): NodeId => asNodeId(`dixeram-pane-${id}`);
+const ZONE = asNodeId('kouhai-panes');
+const idOf = (id: string): NodeId => asNodeId(`kouhai-pane-${id}`);
 
 export type Pane = {
   id: string;

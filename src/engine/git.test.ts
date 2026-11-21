@@ -16,7 +16,7 @@ describe('citesIn', () => {
 
 describe('changedSince', () => {
   it('names cited files changed since a commit, committed or not', () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), 'dixeram-git-')));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'kouhai-git-')));
     const git = (...a: string[]) =>
       execFileSync('git', ['-C', root, '-c', 'user.name=t', '-c', 'user.email=t@t', ...a]);
     try {

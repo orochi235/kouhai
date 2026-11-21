@@ -18,23 +18,23 @@ import { idOf, Store } from './engine/store.ts';
 import { FILTERS, type Filter, type Item, KINDS, type Kind } from './engine/types.ts';
 import { runDaemon } from './server/server.ts';
 
-const USAGE = `dixeram: a ledger of what Claude sessions owe you
+const USAGE = `kouhai: a ledger of what Claude sessions owe you
 
-  dixeram ls [${FILTERS.join('|')}] [questions|tasks] [--tag <tag>]
+  kouhai ls [${FILTERS.join('|')}] [questions|tasks] [--tag <tag>]
                                      list items (default: unread)
-  dixeram show <id>                  print one item and how it was settled
-  dixeram read <id>...               mark settled items read
-  dixeram misfile <id> [why]         mark an item as filed by mistake (--undo to reverse)
-  dixeram tag <id> <tag>             put one of your tags on an item (--undo to take it off)
-  dixeram tags                       list your tags and how many items carry each
-  dixeram open [q-id]                open the inbox page
-  dixeram prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
+  kouhai show <id>                  print one item and how it was settled
+  kouhai read <id>...               mark settled items read
+  kouhai misfile <id> [why]         mark an item as filed by mistake (--undo to reverse)
+  kouhai tag <id> <tag>             put one of your tags on an item (--undo to take it off)
+  kouhai tags                       list your tags and how many items carry each
+  kouhai open [q-id]                open the inbox page
+  kouhai prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
-  dixeram daemon                     serve the inbox page on :${port()}
-  dixeram mcp                        the MCP server Claude Code starts (a relay)
-  dixeram mcp-call                   answer one MCP request from stdin, for the relay
-  dixeram aside                      file a side question the mod answered (JSON on stdin)
-  dixeram hook prompt|stop|subagent-stop|session-start|session-end  the hooks Claude Code runs`;
+  kouhai daemon                     serve the inbox page on :${port()}
+  kouhai mcp                        the MCP server Claude Code starts (a relay)
+  kouhai mcp-call                   answer one MCP request from stdin, for the relay
+  kouhai aside                      file a side question the mod answered (JSON on stdin)
+  kouhai hook prompt|stop|subagent-stop|session-start|session-end  the hooks Claude Code runs`;
 
 async function stdin(): Promise<Payload> {
   let raw = '';
@@ -149,7 +149,7 @@ async function main(argv: string[]) {
     case 'misfile': {
       const undo = rest.includes('--undo');
       const [ref, ...why] = rest.filter((a) => a !== '--undo');
-      if (!ref) return console.error('usage: dixeram misfile <id> [why]');
+      if (!ref) return console.error('usage: kouhai misfile <id> [why]');
       const q = new Store().setMisfiled(ref, !undo, why.join(' ') || null);
       if (!q) return console.error(`no item ${ref}`);
       console.log(undo ? `${nameOf(q)} restored` : `${nameOf(q)} marked misfiled and archived`);
@@ -158,7 +158,7 @@ async function main(argv: string[]) {
     case 'tag': {
       const undo = rest.includes('--undo');
       const [ref, ...name] = rest.filter((a) => a !== '--undo');
-      if (!ref || !name.length) return console.error('usage: dixeram tag <id> <tag> [--undo]');
+      if (!ref || !name.length) return console.error('usage: kouhai tag <id> <tag> [--undo]');
       const store = new Store();
       const q = store.get(ref);
       if (!q) return console.error(`no item ${ref}`);
@@ -188,6 +188,6 @@ async function main(argv: string[]) {
 }
 
 main(process.argv.slice(2)).catch((err) => {
-  console.error(`dixeram: ${(err as Error).message}`);
+  console.error(`kouhai: ${(err as Error).message}`);
   process.exitCode = 1;
 });

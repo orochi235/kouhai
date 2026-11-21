@@ -4,8 +4,8 @@ import { atom, read, update } from 'claude-code';
 import type { Aside, Via } from '../types';
 
 const PANE = 'aside';
-const shown = atom({ plugin: 'dixeram-aside', key: 'shown' } as const, null);
-const recent = atom({ plugin: 'dixeram-aside', key: 'recent' } as const, []);
+const shown = atom({ plugin: 'kouhai-aside', key: 'shown' } as const, null);
+const recent = atom({ plugin: 'kouhai-aside', key: 'recent' } as const, []);
 
 /** How many earlier asides a fork is shown, so a follow-up can lean on them. */
 const CARRIED = 3;
@@ -47,13 +47,13 @@ async function answer(
   if (!r.isAnswered) return { why: WHY[r.reason] ?? `No answer (${r.reason}).` };
   const [session, cwd] = await Promise.all([$.session.id(), $.session.cwd()]);
   const filed = await $.process
-    .run(['dixeram', 'aside'], {
+    .run(['kouhai', 'aside'], {
       stdin: JSON.stringify({ session, cwd, question, answer: r.text, via, usage: r.usage }),
     })
     .catch((err: Error) => ({ exitCode: 1, stdout: '', stderr: err.message }));
   const ref = filed.exitCode === 0 ? filed.stdout.trim() || null : null;
   if (!ref)
-    $.ui.toast(`dixeram couldn't keep that answer: ${filed.stderr.trim().split('\n').pop()}`);
+    $.ui.toast(`kouhai couldn't keep that answer: ${filed.stderr.trim().split('\n').pop()}`);
   const aside: Aside = { question, answer: r.text, ref, via };
   await update($, recent, (list) => [...list, aside].slice(-CARRIED));
   return aside;
@@ -66,7 +66,7 @@ export const register: Register = (on) => {
     await $.command.register({
       name: 'ask',
       description:
-        'Ask a side question about this conversation; the answer is printed and kept in dixeram',
+        'Ask a side question about this conversation; the answer is printed and kept in kouhai',
       argumentHint: '<question>',
       immediate: true,
     });

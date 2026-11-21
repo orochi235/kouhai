@@ -84,7 +84,7 @@ export type Item = Context & {
   cites: string[];
   /** Null for an item an agent filed. */
   via: Via | null;
-  /** Token counts of the model call that answered it, when dixeram made that call. */
+  /** Token counts of the model call that answered it, when kouhai made that call. */
   usage: Record<string, unknown> | null;
   attachments: Attachment[];
   /** The whole prompt the item came from, capped, so it can be read in its setting. */

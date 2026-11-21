@@ -35,7 +35,7 @@ describe('fileAside', () => {
   });
 
   it('keeps the history importer from filing a /btw the mod already answered', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'dixeram-aside-'));
+    const dir = mkdtempSync(join(tmpdir(), 'kouhai-aside-'));
     try {
       const history = join(dir, 'history.jsonl');
       writeFileSync(history, '');

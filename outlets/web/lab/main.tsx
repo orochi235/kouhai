@@ -16,7 +16,7 @@ import { Tint } from './tint.tsx';
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <IconRegistryProvider icons={icons}>
-      <Lab instruments={[Tint]} title="dixeram tint" storageKey="dixeram-tint-lab" />
+      <Lab instruments={[Tint]} title="kouhai tint" storageKey="dixeram-tint-lab" />
     </IconRegistryProvider>
   </StrictMode>,
 );

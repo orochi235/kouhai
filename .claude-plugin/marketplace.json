@@ -1,5 +1,5 @@
 {
-  "name": "dixeram",
+  "name": "kouhai",
   "description": "A ledger of what Claude sessions owe you",
   "owner": {
     "name": "Michael Baker",
@@ -7,15 +7,15 @@
   },
   "plugins": [
     {
-      "name": "dixeram",
+      "name": "kouhai",
       "description": "A ledger of what Claude sessions owe you: direct questions, and instructions not yet carried out",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "source": "./plugin"
     },
     {
-      "name": "dixeram-aside",
-      "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in dixeram",
-      "version": "0.2.2",
+      "name": "kouhai-aside",
+      "description": "Answers /btw (in a pane) and /ask (in the conversation) from the live session's cache, and keeps each answer in kouhai",
+      "version": "0.3.0",
       "source": "./mods/aside"
     }
   ]

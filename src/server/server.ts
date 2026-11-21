@@ -280,7 +280,7 @@ export function runDaemon(outlets: Outlet[], sweep?: (store: Store) => void): vo
   setInterval(ended, HOUR_MS).unref();
   createServer(store, outlets).listen(port(), '::', () => {
     console.log(
-      `dixeram on http://localhost:${port()}, outlets: ${outlets.map((o) => o.name).join(', ')}`,
+      `kouhai on http://localhost:${port()}, outlets: ${outlets.map((o) => o.name).join(', ')}`,
     );
   });
 }

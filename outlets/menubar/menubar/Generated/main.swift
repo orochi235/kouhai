@@ -28,12 +28,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     fileprivate func poll() {
         let group = DispatchGroup()
-        let sync = DispatchQueue(label: "dev.dixeram.menubar.results")
+        let sync = DispatchQueue(label: "dev.kouhai.menubar.results")
         var next = Results()
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            let r = DaemonResult(Watcher.launchAgent(label: "dev.dixeram", plist: "~/Library/LaunchAgents/dev.dixeram.plist"))
+            let r = DaemonResult(Watcher.launchAgent(label: "dev.kouhai", plist: "~/Library/LaunchAgents/dev.kouhai.plist"))
             sync.async {
                 next.daemon = r
                 group.leave()
