@@ -29,7 +29,8 @@
   (served at `:8771/lab.html`) is kept while it is still being tuned; removing it means `lab/`,
   `lab.html`, the `lab` build input in `vite.config.ts`, and the `@weasel-js/labkit` dependency.
 
-- **Rename away from a name that reads as "dicks".** Favorite so far: _kouhai_ (the junior who keeps
-  track for the senior); runners-up _slate_ and _chit_. Left for later (2026-11-16). The rename
-  touches the plugin and marketplace names, the `dev.kouhai` launchd label, `KOUHAI_HOME` and
-  `KOUHAI_PORT`, the `~/.local/bin` link, and every MCP tool prefix.
+- **Build the page against published weasel once `@weasel-js/ui` 2.0.0 is on npm.** weasel 2.0.0
+  went out 2026-11-21 with `@weasel-js/icons/react`, but not `@weasel-js/ui`, which holds the
+  `ShortcutSheet` the page imports. When it ships, move the pins to 2.x, fix what the major breaks, and
+  drop the checkout build as `CLAUDE.md` lists: the vite plugin, the tsconfig paths, `WEASEL=`, and
+  the weasel checkout in `.github/workflows/site.yml`.
