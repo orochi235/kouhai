@@ -1,5 +1,6 @@
 import { nameOf } from '@core/slug.ts';
 import type { Item, Outcome, Tag } from '../api.ts';
+import { renderInline } from '../markdown.ts';
 import { repoClass } from '../repoColors.ts';
 import { stamp } from '../time.ts';
 import { Answer } from './Answer.tsx';
@@ -103,7 +104,7 @@ export function Reader({
             </p>
             {q.outcome && <span className={`stamp ${q.outcome}`}>{STAMP[q.outcome]}</span>}
           </div>
-          <h2 className="headline">{q.text}</h2>
+          <h2 className="headline" dangerouslySetInnerHTML={{ __html: renderInline(q.text) }} />
           <dl className="postmark-block">
             {q.harness && (
               <div>

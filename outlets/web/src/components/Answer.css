@@ -36,7 +36,8 @@
   color: var(--stamp);
 }
 
-.answer code {
+.answer code,
+.verdict code {
   font-family: var(--mono);
   font-size: 0.82em;
   background: var(--select);

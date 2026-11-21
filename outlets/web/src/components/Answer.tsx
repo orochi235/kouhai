@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type Item } from '../api.ts';
 import { drawDiagrams } from '../diagrams.ts';
-import { render } from '../markdown.ts';
+import { render, renderInline } from '../markdown.ts';
 import './Answer.css';
 import './Code.css';
 
@@ -45,7 +45,9 @@ export function Answer({
           .
         </p>
       )}
-      {q.verdict && <p className="verdict">{q.verdict}</p>}
+      {q.verdict && (
+        <p className="verdict" dangerouslySetInnerHTML={{ __html: renderInline(q.verdict) }} />
+      )}
       <div
         ref={answer}
         className="answer"

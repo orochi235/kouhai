@@ -36,6 +36,10 @@ export const render = (md: string, ref?: string) =>
 
 const INLINE = { ALLOWED_TAGS: ['strong', 'em', 'code', 'del'], KEEP_CONTENT: true };
 
+/** One line of inline markdown, such as a verdict or an item's text, keeping only inline styling. */
+export const renderInline = (md: string) =>
+  DOMPurify.sanitize(marked.parseInline(md, { async: false, gfm: true }), INLINE);
+
 /**
  * A note's opening as one line of inline markdown, for a list row. Links keep only their text,
  * since the whole row is the click target; blocks flatten to their words.
