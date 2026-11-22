@@ -254,13 +254,19 @@ export function handle(store: Store, fallback: Context, msg: Rpc): object | null
   }
 }
 
+const PARSE_ERROR = JSON.stringify({
+  jsonrpc: '2.0',
+  id: null,
+  error: { code: -32700, message: 'Parse error' },
+});
+
 /** One JSON-RPC line in, its reply out (null for a notification), against the code on disk now. */
 export function respond(store: Store, line: string): string | null {
   let msg: Rpc;
   try {
     msg = JSON.parse(line);
   } catch {
-    return null;
+    return PARSE_ERROR;
   }
   // A tool call without a turn id is filed under whatever this process can see of its session.
   const fallback = contextOf({
@@ -320,6 +326,7 @@ export function serve(): void {
     try {
       msg = JSON.parse(line);
     } catch {
+      process.stdout.write(`${PARSE_ERROR}\n`);
       return;
     }
     if (msg.id === undefined) return;

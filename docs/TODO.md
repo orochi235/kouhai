@@ -1,11 +1,5 @@
 # kouhai — open work
 
-- **Try the Jira adapter against a real Jira site.** It landed 2026-11-21 tested only against a fake
-  REST server (`src/adapters/jira.test.ts`, and a daemon run against a stand-in on localhost). Point
-  `~/.kouhai/adapters.json` at a scratch project, file and settle one task, and check the issue, the
-  comment's formatting (`adf.ts` converts only paragraphs, fenced code, inline code, bold and links),
-  and the transition names that project's workflow really uses.
-
 - **A shared ledger, with per-repo numbering every collaborator agrees on.** Wanted, put off as more
   than one person's use needs (2026-11-21); the adapter interface is the surface left for it. The
   design talked through then: each user keeps a local SQLite replica; a hub (`kouhai hub`, one

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Item } from '../engine/types.ts';
-import { adfOf } from './adf.ts';
+import { adfOf, plainOf } from './adf.ts';
 import { createJiraAdapter } from './jira.ts';
 
 type Call = { method: string; path: string; body: unknown; auth: string | null };
@@ -102,16 +102,18 @@ describe('the Jira adapter', () => {
     expect(jira.calls.at(-1)?.path).toBe('/issue/KOU-12/comment');
   });
 
-  it('throws before commenting when no transition reaches the target, so a retry is clean', async () => {
+  it('comments without moving when no transition reaches the target, and says so', async () => {
     const jira = fakeJira({
       'GET /issue/KOU-12/transitions': { transitions: [{ id: '11', name: 'Start' }] },
       'GET /issue/KOU-12?fields=status': { fields: { status: { name: 'To Do' } } },
+      'POST /issue/KOU-12/comment': {},
     });
     const a = createJiraAdapter(config, { fetch: jira.fetch, secret });
-    await expect(
-      a.settle(item({ outcome: 'dropped', note: 'no' }), { key: 'KOU-12', url: null }),
-    ).rejects.toThrow(/no transition to "Won't Do"/);
-    expect(jira.calls.some((c) => c.path.endsWith('/comment'))).toBe(false);
+    await a.settle(item({ outcome: 'dropped', note: 'no' }), { key: 'KOU-12', url: null });
+    expect(jira.calls.at(-1)?.path).toBe('/issue/KOU-12/comment');
+    expect(JSON.stringify(jira.calls.at(-1)?.body)).toContain(
+      'kouhai left the status alone: no transition to \\"Won\'t Do\\" from \\"To Do\\"',
+    );
   });
 
   it('waits for the issue before settling, and surfaces Jira errors', async () => {
@@ -141,5 +143,66 @@ describe('adfOf', () => {
       attrs: { language: 'sh' },
       content: [{ type: 'text', text: 'ls' }],
     });
+  });
+
+  it('keeps headings, lists, tables, quotes and italics', () => {
+    const doc = adfOf(
+      '# Head\nintro *soft*\n- one\n- two\n  more\n\n1. first\n\n| a | b |\n|---|--:|\n| 1 | 2 |\n\n> quoted',
+    );
+    expect(doc.content.map((b) => b.type)).toEqual([
+      'heading',
+      'paragraph',
+      'bulletList',
+      'orderedList',
+      'table',
+      'blockquote',
+    ]);
+    expect(doc.content[1]).toEqual({
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'intro ' },
+        { type: 'text', text: 'soft', marks: [{ type: 'em' }] },
+      ],
+    });
+    const para = (...content: object[]) => ({ type: 'paragraph', content });
+    expect(doc.content[2]).toEqual({
+      type: 'bulletList',
+      content: [
+        { type: 'listItem', content: [para({ type: 'text', text: 'one' })] },
+        {
+          type: 'listItem',
+          content: [
+            para(
+              { type: 'text', text: 'two' },
+              { type: 'hardBreak' },
+              { type: 'text', text: 'more' },
+            ),
+          ],
+        },
+      ],
+    });
+    const table = doc.content[4] as {
+      content: { content: { type: string; content: unknown }[] }[];
+    };
+    expect(table.content.map((r) => r.content.map((c) => c.type))).toEqual([
+      ['tableHeader', 'tableHeader'],
+      ['tableCell', 'tableCell'],
+    ]);
+    expect(table.content[1]?.content[1]?.content).toEqual([para({ type: 'text', text: '2' })]);
+  });
+
+  it('leaves snake_case and multiplication alone', () => {
+    expect(adfOf('a snake_case_name and 2 * 3 * 4').content[0]).toEqual({
+      type: 'paragraph',
+      content: [{ type: 'text', text: 'a snake_case_name and 2 * 3 * 4' }],
+    });
+  });
+});
+
+describe('plainOf', () => {
+  it('drops markdown marks for a plain-text summary', () => {
+    expect(plainOf('mirror **bold**,\n`code` and a [link](https://x)')).toBe(
+      'mirror bold, code and a link',
+    );
   });
 });

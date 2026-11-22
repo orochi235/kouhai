@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { Item, Outcome } from '../engine/types.ts';
 import type { Adapter, Recorded } from './adapter.ts';
-import { adfOf } from './adf.ts';
+import { adfOf, plainOf } from './adf.ts';
 
 /** A secret read from an environment variable, or printed by a shell command (a keychain lookup). */
 export type Secret = { env: string } | { command: string };
@@ -66,8 +66,14 @@ export function createJiraAdapter(
     return (text ? JSON.parse(text) : null) as T;
   }
 
-  /** The transition to `target`, or null when the issue already sits in it; throws when neither. */
-  async function transitionTo(key: string, target: string): Promise<string | null> {
+  /**
+   * The transition to `target`; null when the issue already sits there, or a reason when no
+   * transition reaches it from where it is.
+   */
+  async function transitionTo(
+    key: string,
+    target: string,
+  ): Promise<string | null | { missing: string }> {
     const same = (s: string | undefined) => s?.toLowerCase() === target.toLowerCase();
     const { transitions: open } = await call<{
       transitions: { id: string; name: string; to?: { name?: string } }[];
@@ -79,7 +85,7 @@ export function createJiraAdapter(
       `/issue/${key}?fields=status`,
     );
     if (same(issue.fields.status.name)) return null;
-    throw new Error(`${key} has no transition to "${target}" from "${issue.fields.status.name}"`);
+    return { missing: `no transition to "${target}" from "${issue.fields.status.name}"` };
   }
 
   return {
@@ -91,7 +97,7 @@ export function createJiraAdapter(
         fields: {
           project: { key: config.project },
           issuetype: { name: config.issueType ?? 'Task' },
-          summary: item.text.replace(/\s+/g, ' ').trim().slice(0, 255),
+          summary: plainOf(item.text).slice(0, 255),
           description: adfOf(`${item.text}\n\nFiled by kouhai as \`${item.ref}\`${where}.`),
           labels: ['kouhai', ...item.tags.map((t) => t.replace(/\s+/g, '-'))],
         },
@@ -101,14 +107,17 @@ export function createJiraAdapter(
 
     async settle(item: Item, at: Recorded | null): Promise<void> {
       if (!at) throw new Error(`${item.ref} has no issue yet`);
-      // Find the transition before commenting, so a retry after a bad one doesn't comment twice.
+      // A workflow without the outcome's status still gets the comment, saying it wasn't moved.
       const target = item.outcome ? transitions[item.outcome] : undefined;
-      const id = target ? await transitionTo(at.key, target) : null;
+      const to = target ? await transitionTo(at.key, target) : null;
       const verdict = item.verdict ? `**${item.verdict}**\n\n` : '';
+      const stuck =
+        to && typeof to === 'object' ? `\n\n_kouhai left the status alone: ${to.missing}._` : '';
       await call('POST', `/issue/${at.key}/comment`, {
-        body: adfOf(`${item.outcome}: ${verdict}${item.note ?? ''}`),
+        body: adfOf(`${item.outcome}: ${verdict}${item.note ?? ''}${stuck}`),
       });
-      if (id) await call('POST', `/issue/${at.key}/transitions`, { transition: { id } });
+      if (typeof to === 'string')
+        await call('POST', `/issue/${at.key}/transitions`, { transition: { id: to } });
     },
   };
 }

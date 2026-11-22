@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../engine/store.ts';
 import { citations } from './cite.ts';
-import { handle, instructions, relayReply } from './mcp.ts';
+import { handle, instructions, relayReply, respond } from './mcp.ts';
 
 const fb = { session: 's', harness: 'claude', cwd: '/c', root: '/c', repo: 'c', transcript: null };
 
@@ -16,6 +16,13 @@ const call = (s: Store, name: string, args: object) =>
   };
 
 describe('mcp', () => {
+  it('answers a line it cannot parse with a JSON-RPC parse error', () => {
+    expect(JSON.parse(respond(new Store(':memory:'), '{"jsonrpc":') ?? '')).toMatchObject({
+      id: null,
+      error: { code: -32700 },
+    });
+  });
+
   it('lists take, settle, owed, and show', () => {
     const out = handle(new Store(':memory:'), fb, {
       jsonrpc: '2.0',

@@ -127,10 +127,10 @@ and holds events (losing none) while the file doesn't parse.
 }
 ```
 
-| Kind    | Filed                                                                                             | Settled                                                                                                                                                      |
-| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `local` | nothing                                                                                           | nothing                                                                                                                                                      |
-| `jira`  | an issue (`issueType`, `Task` by default) in `project`, labeled `kouhai` and with the item's tags | a comment holding the note, then a move by `transitions` (outcome to transition or status name; `done` and `answered` go to `Done`, `dropped` to `Won't Do`) |
+| Kind    | Filed                                                                                             | Settled                                                                                                                                                                                                                                          |
+| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `local` | nothing                                                                                           | nothing                                                                                                                                                                                                                                          |
+| `jira`  | an issue (`issueType`, `Task` by default) in `project`, labeled `kouhai` and with the item's tags | a comment holding the note, then a move by `transitions` (outcome to transition or status name; `done` and `answered` go to `Done`, `dropped` to `Won't Do`; a workflow without the status keeps the issue where it is, and the comment says so) |
 
 A Jira `token` is `{ "env": "NAME" }` or `{ "command": "..." }`, read when the first request goes
 out. A new adapter is a module exporting a factory for the `Adapter` interface in
