@@ -82,7 +82,7 @@ describe('mcp', () => {
     expect(s.get('t-3')?.outcome).toBeNull();
     expect(out).toMatch(/q-1: why\? \[settled as answered/);
     expect(out).toMatch(/t-2: do it \[not settled/);
-    expect(out).toMatch(/settle` each still owed/);
+    expect(out).toMatch(/settle` each task when it is done/);
     expect(out).toMatch(/end an answer in chat with "\[.*q-1.*\]", appended to its last paragraph/);
   });
 

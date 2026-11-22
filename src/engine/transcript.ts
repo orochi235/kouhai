@@ -13,7 +13,7 @@ export type Line = Record<string, unknown> & {
   attachment?: Record<string, unknown>;
 };
 
-function tail(path: string): Line[] {
+export function tail(path: string): Line[] {
   let fd: number;
   try {
     fd = openSync(path, 'r');

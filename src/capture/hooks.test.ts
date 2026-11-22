@@ -235,3 +235,25 @@ describe('sessionStartHook', () => {
     expect(sessionStartHook(s, { ...p, source: 'clear' })).toBeNull();
   });
 });
+
+describe('settleAnswers', () => {
+  it("settles this session's owed questions from the chat, and leaves the rest", () => {
+    const s = new Store(':memory:');
+    s.take([{ kind: 'question', text: 'why?' }], null, ctx('s1'));
+    s.take([{ kind: 'question', text: 'elsewhere?' }], null, ctx('s0'));
+    s.take([{ kind: 'task', text: 'do it' }], null, ctx('s1'));
+    const path = transcript([
+      { type: 'user', origin: { kind: 'human' }, message: { content: 'why?' } },
+      {
+        type: 'assistant',
+        message: {
+          content: [{ type: 'text', text: 'Because. [q-1]\n\nAlso. [q-2]\n\nDone. [t-3]' }],
+        },
+      },
+    ]);
+    stopHook(s, { session_id: 's1', transcript_path: path });
+    expect(s.get('q-1')).toMatchObject({ outcome: 'answered', note: 'Because.' });
+    expect(s.get('q-2')?.outcome).toBeNull();
+    expect(s.get('t-3')?.outcome).toBeNull();
+  });
+});

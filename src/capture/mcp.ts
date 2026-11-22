@@ -135,7 +135,7 @@ function uiUp(): boolean {
 /** How to end a chat answer with an item's marker: a link to the item while the UI runs, else the bare id. */
 function markerRule(refs: readonly string[], link: (ref: string) => string): string {
   const shown = uiUp() ? refs.map((r) => `[${r}](${link(r)})`).join(', ') : refs.join(', ');
-  return `end an answer in chat with "[${shown}]", appended to its last paragraph rather than on a line of its own`;
+  return `end an answer in chat with "[${shown}]", appended to its last paragraph rather than on a line of its own: kouhai settles it with that answer when the turn ends`;
 }
 
 export function callTool(
@@ -173,7 +173,9 @@ export function callTool(
     return text(
       `Filed in the kouhai ledger:\n${lines.map((l) => l.head).join('\n')}\n` +
         'Tell the user in one line what you filed, naming each by id and slug as above' +
-        (lines.some((l) => l.owed) ? ', then `settle` each still owed when it is' : '') +
+        (filed.some((i, n) => i.kind === 'task' && lines[n]?.owed)
+          ? ', then `settle` each task when it is done'
+          : '') +
         (lines.some((l) => l.question)
           ? `; ${markerRule(
               filed.filter((i) => i.kind === 'question').map((i) => i.ref),

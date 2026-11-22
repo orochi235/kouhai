@@ -41,8 +41,8 @@ export const TOOLS = [
   {
     name: 'take',
     description:
-      "File what you owe, quoting or tightly paraphrasing the user. Pass the hook's `turn` id. An " +
-      'item you can settle now takes its `outcome` and `note` here instead of a separate `settle`. ' +
+      "File what you owe, quoting or tightly paraphrasing the user. Pass the hook's `turn` id. A " +
+      'question answered in chat needs no `note`: end the answer with its id or `#slug`. ' +
       'Returns ids like q-17 #cost-of-slugs.',
     inputSchema: {
       type: 'object',

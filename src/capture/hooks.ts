@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { answersIn } from '../engine/answers.ts';
 import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
@@ -22,13 +23,14 @@ export const RULE =
   'instruction you won\'t finish this turn (kind "task": queued, for later, or arriving mid-turn). ' +
   "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
   'question about what to work on next; or one about how something works when answering leads into ' +
-  'work this turn. A filed item stays owed until you `settle` it. Only after `take` returns ids, say ' +
-  'in one line what you filed, giving each id with its slug ("Filed q-17 #cost-of-slugs, t-18 #fix-the-build.") and end an answer in chat with its id, appended to the answer\'s last paragraph ' +
-  'rather than on a line of its own ("…last sentence. [q-17]"), the id a link to the item when `take` ' +
-  'or `settle` gives one; if `take` fails or is not among your tools, say so instead. A kouhai call ' +
-  'alone in a step costs an extra request, so pair them: file a question you answer without running ' +
-  'anything already answered (`take` with `outcome` and `note`), call `take` beside your first other ' +
-  "tool call, and `settle` beside your last when its note doesn't wait on that call.";
+  'work this turn. Answer a question in chat, written to stand on its own away from this chat, and end ' +
+  'the answer with its id or slug, appended to its last paragraph ("…last sentence. [q-17]" or ' +
+  '"[#cost-of-slugs]"): when the turn ends kouhai settles it with that answer as the note, so don\'t ' +
+  '`settle` it yourself. `settle` the rest (a task done, or an item dropped or deferred) when it is. ' +
+  'Never make a kouhai call alone in a step: each costs a whole extra request. Call `take` beside your ' +
+  'next other tool call, ending an answer you give before it with the slug you will pass; with no other ' +
+  'call left this turn, file everything in one `take` at the end. Once `take` returns, say in one line ' +
+  'what you filed ("Filed q-17 #cost-of-slugs."); if it fails or is not among your tools, say so instead.';
 
 /**
  * Every prompt after a session's first. Each injection stays in context and is re-read by every
@@ -112,6 +114,15 @@ function sideQuestions(store: Store, session: string, configDir?: string): Item[
   return untoldBtws(store, session);
 }
 
+/** Settles this session's owed questions that the turn's chat answered, with the answer as the note. */
+export function settleAnswers(store: Store, session: string, transcript: string): void {
+  for (const a of answersIn(transcript, store.refs)) {
+    const item = store.get(a.ref);
+    if (!item || item.outcome || item.kind !== 'question' || item.session !== session) continue;
+    store.settle(item.id, 'answered', a.note, [], a.extra);
+  }
+}
+
 /**
  * Holds the turn open once, and only for something unfiled: a message the user sent mid-turn
  * that no prompt hook delivered the filing rule for. Owed items are already in the ledger.
@@ -120,6 +131,7 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
   const session = typeof p.session_id === 'string' ? p.session_id : null;
   const transcript = typeof p.transcript_path === 'string' ? p.transcript_path : null;
   if (!session || !transcript) return null;
+  settleAnswers(store, session, transcript);
   const btws = sideQuestions(store, session, configDir);
   if (btws.length) {
     return {
