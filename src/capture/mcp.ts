@@ -154,19 +154,17 @@ export function callTool(
     const lines = filed.map((i, n) => {
       const head = `${nameOf(i)}${i.parent ? ` (follows ${i.parent})` : ''}: ${i.text}`;
       const s = items[n]?.settled;
-      if (!s) return { head, owed: true, question: false };
+      if (!s) return { head, owed: true };
       try {
         store.settle(i.id, s.outcome, s.note, s.attachments, s.extra);
         return {
           head: `${head} [settled as ${s.outcome}: ${link(i.ref)}]`,
           owed: false,
-          question: i.kind === 'question',
         };
       } catch (err) {
         return {
           head: `${head} [not settled: ${(err as Error).message}]`,
           owed: true,
-          question: false,
         };
       }
     });
@@ -176,7 +174,7 @@ export function callTool(
         (filed.some((i, n) => i.kind === 'task' && lines[n]?.owed)
           ? ', then `settle` each task when it is done'
           : '') +
-        (lines.some((l) => l.question)
+        (filed.some((i) => i.kind === 'question')
           ? `; ${markerRule(
               filed.filter((i) => i.kind === 'question').map((i) => i.ref),
               link,

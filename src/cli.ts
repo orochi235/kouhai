@@ -41,6 +41,15 @@ const USAGE = `kouhai: a ledger of what Claude sessions owe you
   kouhai aside                      file a side question the mod answered (JSON on stdin)
   kouhai hook prompt|stop|subagent-stop|session-start|session-end  the hooks Claude Code runs`;
 
+/** Counting a turn's cost must never stop the rest of the hook from running. */
+function meterSafely(fn: () => unknown) {
+  try {
+    fn();
+  } catch (err) {
+    console.error(`kouhai: counting the turn's cost failed: ${(err as Error).message}`);
+  }
+}
+
 async function stdin(): Promise<Payload> {
   let raw = '';
   for await (const chunk of process.stdin) raw += chunk;
@@ -107,9 +116,10 @@ async function main(argv: string[]) {
           rest[0] === 'prompt'
             ? promptHook(store, p, process.env.CLAUDE_CONFIG_DIR)
             : rest[0] === 'stop'
-              ? (spendHook(store, p), stopHook(store, p, process.env.CLAUDE_CONFIG_DIR))
+              ? (meterSafely(() => spendHook(store, p)),
+                stopHook(store, p, process.env.CLAUDE_CONFIG_DIR))
               : rest[0] === 'subagent-stop'
-                ? (subagentSpendHook(store, p), subagentStopHook(store, p))
+                ? (meterSafely(() => subagentSpendHook(store, p)), subagentStopHook(store, p))
                 : rest[0] === 'session-start'
                   ? sessionStartHook(store, p, process.env.CLAUDE_CONFIG_DIR)
                   : rest[0] === 'session-end'

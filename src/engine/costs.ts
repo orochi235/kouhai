@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS meters (
   at INTEGER NOT NULL
 );`;
 
+/** Count columns added after the table was first made, each added in place when missing. */
+const COUNTS = ['cache_write_1h', 'kouhai_output'];
+
 /** How far into a transcript its cost has been counted, and the kouhai tokens in context there. */
 export type Meter = { offset: number; live: number };
 
@@ -55,6 +58,11 @@ export class Costs {
     this.db = db;
     this.now = now;
     db.exec(COSTS);
+    const has = new Set(
+      (db.prepare('PRAGMA table_info(turn_costs)').all() as { name: string }[]).map((c) => c.name),
+    );
+    for (const c of COUNTS)
+      if (!has.has(c)) db.exec(`ALTER TABLE turn_costs ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 0`);
   }
 
   meterOf(key: string): Meter | null {

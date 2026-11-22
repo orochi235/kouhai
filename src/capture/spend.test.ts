@@ -2,6 +2,8 @@ import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { Costs } from '../engine/costs.ts';
+import { meter } from '../engine/meter.ts';
 import { Store } from '../engine/store.ts';
 import { spendHook, subagentSpendHook } from './spend.ts';
 
@@ -65,5 +67,26 @@ describe('spendHook', () => {
     s.prune();
     expect(s.costs.turn(turn.id)).toBeNull();
     expect(s.costs.meterOf('session:s1')).toBeNull();
+  });
+
+  it('adds count columns a table made by an older version lacks', () => {
+    const s = new Store(':memory:');
+    s.db.exec('DROP TABLE turn_costs');
+    s.db.exec(
+      `CREATE TABLE turn_costs (turn TEXT PRIMARY KEY, session TEXT NOT NULL, harness TEXT, repo TEXT, model TEXT,
+        at INTEGER NOT NULL, calls INTEGER NOT NULL, input INTEGER NOT NULL, cache_read INTEGER NOT NULL,
+        cache_write INTEGER NOT NULL, output INTEGER NOT NULL, kouhai_added INTEGER NOT NULL,
+        kouhai_read INTEGER NOT NULL, trips INTEGER NOT NULL, trip_read INTEGER NOT NULL,
+        agents INTEGER NOT NULL DEFAULT 0)`,
+    );
+    const again = new Costs(s.db, s.now);
+    const turn = s.addTurn(ctx, 'go');
+    again.record(
+      'k',
+      's1',
+      { ...meter([], 0).spend, calls: 1, cacheWrite1h: 5 },
+      { offset: 0, live: 0 },
+    );
+    expect(again.turn(turn.id)).toMatchObject({ cache_write_1h: 5, kouhai_output: 0 });
   });
 });

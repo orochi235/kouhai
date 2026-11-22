@@ -60,6 +60,13 @@ describe('answersIn', () => {
     ]);
   });
 
+  it('ignores a citation inside a code span', () => {
+    const path = file([prompt('how?'), say('End with `[q-17]` like this. [q-3]')]);
+    expect(answersIn(path, new RefScheme())).toEqual([
+      { ref: 'q-3', note: 'End with `[q-17]` like this.', extra: {} },
+    ]);
+  });
+
   it('reads only the last turn', () => {
     const path = file([
       prompt('old'),

@@ -90,9 +90,17 @@ export function answersIn(path: string, refs: RefScheme): Answer[] {
   for (const text of texts) {
     let acc: string[] = [];
     for (const para of text.split(/\n{2,}/)) {
-      const cited = [...para.matchAll(cite)].map((m) => m[1] as string);
-      const kept = para.replace(filedLine, '');
-      acc.push(kept.replace(cite, '').trimEnd());
+      // Odd pieces are inside code spans, where a citation is only an example of one.
+      const pieces = para.replace(filedLine, '').split('`');
+      const cited = pieces.flatMap((t, n) =>
+        n % 2 ? [] : [...t.matchAll(cite)].map((m) => m[1] as string),
+      );
+      acc.push(
+        pieces
+          .map((t, n) => (n % 2 ? t : t.replace(cite, '')))
+          .join('`')
+          .trimEnd(),
+      );
       if (!cited.length) continue;
       const note = acc.filter(Boolean).join('\n\n').trim();
       acc = [];
