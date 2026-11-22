@@ -40,7 +40,7 @@ describe('answersIn', () => {
         'Filed q-1 #first, q-2 #second. The first answer.\n\nMore of it. [[q-1](http://x/?q=q-1)]\n\nThe second answer. [q-2]\n\nNow some work.',
       ),
     ]);
-    expect(answersIn(path, new RefScheme())).toEqual([
+    expect(answersIn(path, new RefScheme()).answers).toMatchObject([
       { ref: 'q-1', note: 'The first answer.\n\nMore of it.', extra: {} },
       { ref: 'q-2', note: 'The second answer.', extra: {} },
     ]);
@@ -55,14 +55,14 @@ describe('answersIn', () => {
       ),
       result('t1', 'Filed in the kouhai ledger:\nq-7 #does-it-2: does it?\nTell the user.'),
     ]);
-    expect(answersIn(path, new RefScheme())).toEqual([
+    expect(answersIn(path, new RefScheme()).answers).toMatchObject([
       { ref: 'q-7', note: 'Yes, it does.', extra: { verdict: 'Yes.', basis: null, scope: null } },
     ]);
   });
 
   it('ignores a citation inside a code span', () => {
     const path = file([prompt('how?'), say('End with `[q-17]` like this. [q-3]')]);
-    expect(answersIn(path, new RefScheme())).toEqual([
+    expect(answersIn(path, new RefScheme()).answers).toMatchObject([
       { ref: 'q-3', note: 'End with `[q-17]` like this.', extra: {} },
     ]);
   });
@@ -74,6 +74,29 @@ describe('answersIn', () => {
       prompt('new'),
       say('No citations.'),
     ]);
-    expect(answersIn(path, new RefScheme())).toEqual([]);
+    expect(answersIn(path, new RefScheme()).answers).toMatchObject([]);
+  });
+
+  it('takes an unknown slug as a question the chat filed, with its parent and the message', () => {
+    const path = file([
+      prompt('first?'),
+      {
+        type: 'attachment',
+        attachment: {
+          type: 'hook_additional_context',
+          content: ['kouhai, turn "turn-ab12cd34" (pass it…'],
+        },
+      },
+      say('Working.'),
+      {
+        type: 'attachment',
+        attachment: { type: 'queued_command', prompt: 'and why?', commandMode: 'prompt' },
+      },
+      say('Because. [#and-why ^q-4]'),
+    ]);
+    expect(answersIn(path, new RefScheme())).toEqual({
+      turn: 'turn-ab12cd34',
+      answers: [{ slug: 'and-why', parent: 'q-4', note: 'Because.', extra: {}, asked: 'and why?' }],
+    });
   });
 });

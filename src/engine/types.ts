@@ -58,7 +58,7 @@ export const SCOPES: Scope[] = ['session', 'durable'];
  * How an item reached the ledger when an agent didn't file it: `btw` from a /btw side question,
  * `ask` from the mod's /ask.
  */
-export type Via = 'btw' | 'ask';
+export type Via = 'btw' | 'ask' | 'chat';
 
 /** Where an adapter recorded an item in its own system, such as a Jira issue. */
 export type External = { adapter: string; key: string; url: string | null };

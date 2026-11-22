@@ -257,3 +257,27 @@ describe('settleAnswers', () => {
     expect(s.get('t-3')?.outcome).toBeNull();
   });
 });
+
+describe('settleAnswers from chat tags', () => {
+  it('files and settles a tagged question, and does not chase the message it answered', () => {
+    const s = new Store(':memory:');
+    const path = transcript([
+      { type: 'user', origin: { kind: 'human' }, message: { content: 'go' } },
+      queued('wait, is it cached?', 'm1'),
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'Yes, it is cached. [#is-it-cached]' }] },
+      },
+    ]);
+    expect(stopHook(s, { session_id: 's1', transcript_path: path })).toBeNull();
+    expect(s.get('#is-it-cached')).toMatchObject({
+      text: 'wait, is it cached?',
+      via: 'chat',
+      outcome: 'answered',
+      note: 'Yes, it is cached.',
+      session: 's1',
+    });
+    stopHook(s, { session_id: 's1', transcript_path: path });
+    expect(s.list('all').length).toBe(1);
+  });
+});

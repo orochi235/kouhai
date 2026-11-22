@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { TITLE_WAIT_MS } from './triage.ts';
 
 /** What happened to an item that adapters hear about. */
 export type Event = 'filed' | 'settled';
@@ -65,14 +66,19 @@ export class Outbox {
       .run(item, event, this.now());
   }
 
-  /** Events ready for another attempt, oldest first, so an item's filing goes before its settling. */
+  /**
+   * Events ready for another attempt, oldest first, so an item's filing goes before its settling.
+   * A question the chat filed waits for its title, so an adapter never records the provisional one.
+   */
   due(limit = 50): Pending[] {
     return (
       this.db
         .prepare(
-          'SELECT * FROM outbox WHERE failed_at IS NULL AND next_at <= ? ORDER BY id LIMIT ?',
+          `SELECT * FROM outbox WHERE failed_at IS NULL AND next_at <= ? AND item NOT IN
+             (SELECT id FROM items WHERE via = 'chat' AND triaged_at IS NULL AND raised_at > ?)
+           ORDER BY id LIMIT ?`,
         )
-        .all(this.now(), limit) as Row[]
+        .all(this.now(), this.now() - TITLE_WAIT_MS, limit) as Row[]
     ).map(toPending);
   }
 

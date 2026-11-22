@@ -42,7 +42,7 @@ export function tail(path: string): Line[] {
 export const isPrompt = (l: Line) =>
   l.type === 'user' && l.origin?.kind === 'human' && typeof l.message?.content === 'string';
 
-const isMidTurn = (l: Line) =>
+export const isMidTurn = (l: Line) =>
   l.type === 'attachment' &&
   l.attachment?.type === 'queued_command' &&
   l.attachment.commandMode === 'prompt' &&

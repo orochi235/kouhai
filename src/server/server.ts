@@ -11,6 +11,7 @@ import { Store } from '../engine/store.ts';
 import { FILTERS, type Filter, type Item, KINDS, type Kind } from '../engine/types.ts';
 import type { Handler, Outlet } from './outlet.ts';
 import { serveStatic } from './static.ts';
+import { askClaude, triage } from './triage.ts';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -292,6 +293,22 @@ export function runDaemon(
     };
     run();
     setInterval(run, MINUTE_MS).unref();
+  }
+  // Answered questions get a tidy pass a minute or so later; KOUHAI_TRIAGE=0 turns it off.
+  if (process.env.KOUHAI_TRIAGE !== '0') {
+    let tidying = false;
+    const tidy = async () => {
+      if (tidying) return;
+      tidying = true;
+      try {
+        await triage(store, askClaude);
+      } catch (err) {
+        console.error(`triage: ${(err as Error).message}`);
+      } finally {
+        tidying = false;
+      }
+    };
+    setInterval(tidy, MINUTE_MS).unref();
   }
   const prune = () => {
     const n = store.prune();

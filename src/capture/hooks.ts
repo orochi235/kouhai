@@ -5,7 +5,8 @@ import { contextOf } from '../engine/context.ts';
 import { detect } from '../engine/detect.ts';
 import type { Store } from '../engine/store.ts';
 import { filedRefs, kouhaiTools, unledgeredMidTurn } from '../engine/transcript.ts';
-import type { Item } from '../engine/types.ts';
+import { provisionalTitle, setAsked } from '../engine/triage.ts';
+import type { Context, Item } from '../engine/types.ts';
 import { btwRule, fileBtws, untoldBtws } from './btw.ts';
 import { citations } from './cite.ts';
 
@@ -19,18 +20,17 @@ const quote = (s: string, n = 80) => `"${s.length > n ? `${s.slice(0, n - 1)}…
 
 /** The filing rule, the same on every prompt and in the MCP server's instructions. */
 export const RULE =
-  'File with kouhai\'s `take`, giving each item a `slug`: every direct question the user asks (kind "question"), and every ' +
-  'instruction you won\'t finish this turn (kind "task": queued, for later, or arriving mid-turn). ' +
-  "Don't file an instruction you carry out or start this turn, yourself or through an agent; a " +
-  'question about what to work on next; or one about how something works when answering leads into ' +
-  'work this turn. Answer a question in chat, written to stand on its own away from this chat, and end ' +
-  'the answer with its id or slug, appended to its last paragraph ("…last sentence. [q-17]" or ' +
-  '"[#cost-of-slugs]"): when the turn ends kouhai settles it with that answer as the note, so don\'t ' +
-  '`settle` it yourself. `settle` the rest (a task done, or an item dropped or deferred) when it is. ' +
-  'Never make a kouhai call alone in a step: each costs a whole extra request. Call `take` beside your ' +
-  'next other tool call, ending an answer you give before it with the slug you will pass; with no other ' +
-  'call left this turn, file everything in one `take` at the end. Once `take` returns, say in one line ' +
-  'what you filed ("Filed q-17 #cost-of-slugs."); if it fails or is not among your tools, say so instead.';
+  'Kouhai keeps what you owe the user. A question you answer this turn needs no tool call: end the ' +
+  'answer with a new slug, two to five lowercase words, in brackets ("…last sentence. [#cost-of-slugs]"), ' +
+  'appended to its last paragraph, and kouhai files it and keeps the answer as its note when the turn ' +
+  'ends; write the answer to stand on its own away from this chat. File with `take` only what stays ' +
+  'owed: an instruction you won\'t finish this turn (kind "task": queued, for later, or arriving ' +
+  "mid-turn) and a question you can't answer now. Never make a kouhai call alone in a step: each costs " +
+  'a whole extra request, so call `take` beside your next other tool call, or once at the end. Answer ' +
+  'a question filed earlier the same way, ending with its id ("[q-17]"); `settle` a task when it is ' +
+  "done, or an item you drop or defer. Don't file an instruction you carry out or start this turn, " +
+  'yourself or through an agent; a question about what to work on next; or one about how something ' +
+  'works when answering leads into work this turn.';
 
 /**
  * Every prompt after a session's first. Each injection stays in context and is re-read by every
@@ -44,8 +44,8 @@ export const REMINDER =
 function lastTurnRule(settled: Item[]): string {
   const list = settled.map((q) => `${q.ref} ${quote(q.text, 60)}`).join(', ');
   return (
-    `Last turn you settled ${list}. If a question you file follows up on one of those ` +
-    "answers, pass that item's id as the question's `parent`; leave `parent` out for a new subject."
+    `Last turn you settled ${list}. A question following up on one of those answers names it in ` +
+    'its tag ("[#slug ^q-17]"), or as `parent` in `take`.'
   );
 }
 
@@ -114,13 +114,42 @@ function sideQuestions(store: Store, session: string, configDir?: string): Item[
   return untoldBtws(store, session);
 }
 
-/** Settles this session's owed questions that the turn's chat answered, with the answer as the note. */
-export function settleAnswers(store: Store, session: string, transcript: string): void {
-  for (const a of answersIn(transcript, store.refs)) {
-    const item = store.get(a.ref);
+/**
+ * Settles what the turn's chat answered: this session's owed questions it cited, and questions
+ * it tagged with a new slug, which are filed here first under a provisional title. Returns the
+ * user's messages that were answered.
+ */
+export function settleAnswers(
+  store: Store,
+  session: string,
+  transcript: string,
+  fallback: Context,
+): Set<string> {
+  const { turn, answers } = answersIn(transcript, store.refs);
+  for (const a of answers) {
+    let item = store.get(a.ref ?? `#${a.slug}`);
+    if (a.slug && !a.ref && (!item || item.session !== session)) {
+      const [filed] = store.take(
+        [
+          {
+            kind: 'question',
+            text: provisionalTitle(a.asked, a.slug),
+            slug: a.slug,
+            parent: a.parent ?? null,
+            via: 'chat',
+          },
+        ],
+        turn,
+        fallback,
+      );
+      if (!filed) continue;
+      setAsked(store.db, filed.id, a.asked);
+      item = filed;
+    }
     if (!item || item.outcome || item.kind !== 'question' || item.session !== session) continue;
     store.settle(item.id, 'answered', a.note, [], a.extra);
   }
+  return new Set(answers.map((a) => a.asked));
 }
 
 /**
@@ -131,7 +160,12 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
   const session = typeof p.session_id === 'string' ? p.session_id : null;
   const transcript = typeof p.transcript_path === 'string' ? p.transcript_path : null;
   if (!session || !transcript) return null;
-  settleAnswers(store, session, transcript);
+  const answered = settleAnswers(
+    store,
+    session,
+    transcript,
+    contextOf({ session, transcript, cwd: p.cwd, configDir }),
+  );
   const btws = sideQuestions(store, session, configDir);
   if (btws.length) {
     return {
@@ -141,14 +175,14 @@ export function stopHook(store: Store, p: Payload, configDir?: string): HookOutp
     };
   }
   const mid = unledgeredMidTurn(transcript)
-    .filter((m) => !store.heard(session, m.text))
+    .filter((m) => !answered.has(m.text) && !store.heard(session, m.text))
     .filter((m) => store.chaseOnce(m.key));
   if (!mid.length) return null;
   const one = mid.length === 1;
   return {
     systemMessage: `kouhai ▸ holding the turn open to check ${mid.length} mid-turn ${one ? 'message' : 'messages'}`,
     decision: 'block',
-    reason: `kouhai: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. File any direct question or unfinished instruction in ${one ? 'it' : 'them'} with \`take\`. If there is nothing to file, end the turn without saying so.`,
+    reason: `kouhai: The user sent ${one ? 'a message' : 'messages'} while you were working that the ledger never saw: ${mid.map((m) => quote(m.text, 120)).join('; ')}. Answer any direct question in ${one ? 'it' : 'them'} ending with a new slug in brackets, and file any unfinished instruction with \`take\`. If there is nothing to file, end the turn without saying so.`,
   };
 }
 
