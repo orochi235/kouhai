@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { Costs } from './costs.ts';
 import { dropEnclosures, keep, keepNote } from './enclosures.ts';
 import { citesIn, headOf } from './git.ts';
 import { Outbox } from './outbox.ts';
@@ -37,6 +38,7 @@ export class Store {
   now: () => number;
   tags: Tags;
   outbox: Outbox;
+  costs: Costs;
   /** How refs are written and read, from the `refs` setting. */
   refs: RefScheme;
 
@@ -49,6 +51,7 @@ export class Store {
     migrate(this.db);
     this.tags = new Tags(this.db, now);
     this.outbox = new Outbox(this.db, now);
+    this.costs = new Costs(this.db, now);
     this.db.exec(REVISION);
     this.refs = new RefScheme(this.settings().refs);
   }
@@ -511,6 +514,7 @@ export class Store {
     this.db.prepare('DELETE FROM chased WHERE at < ?').run(now - TURN_TTL_MS);
     this.tags.prune();
     this.outbox.prune();
+    this.costs.prune();
     return { items: gone.length, turns: Number(t.changes) };
   }
 }

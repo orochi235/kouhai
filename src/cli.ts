@@ -14,6 +14,8 @@ import {
   subagentStopHook,
 } from './capture/hooks.ts';
 import { respond, serve } from './capture/mcp.ts';
+import { spendHook, subagentSpendHook } from './capture/spend.ts';
+import { costTable } from './cost-table.ts';
 import { ARCHIVE_TTL_MS, port } from './engine/paths.ts';
 import { nameOf } from './engine/slug.ts';
 import { Store } from './engine/store.ts';
@@ -30,6 +32,7 @@ const USAGE = `kouhai: a ledger of what Claude sessions owe you
   kouhai tag <id> <tag>             put one of your tags on an item (--undo to take it off)
   kouhai tags                       list your tags and how many items carry each
   kouhai open [q-id]                open the inbox page
+  kouhai cost [days] [--repo <name>] each day's token use and kouhai's share (default: 14 days)
   kouhai prune                      delete items archived over ${ARCHIVE_TTL_MS / 86_400_000} days ago
 
   kouhai daemon                     serve the inbox page on :${port()}
@@ -104,9 +107,9 @@ async function main(argv: string[]) {
           rest[0] === 'prompt'
             ? promptHook(store, p, process.env.CLAUDE_CONFIG_DIR)
             : rest[0] === 'stop'
-              ? stopHook(store, p, process.env.CLAUDE_CONFIG_DIR)
+              ? (spendHook(store, p), stopHook(store, p, process.env.CLAUDE_CONFIG_DIR))
               : rest[0] === 'subagent-stop'
-                ? subagentStopHook(store, p)
+                ? (subagentSpendHook(store, p), subagentStopHook(store, p))
                 : rest[0] === 'session-start'
                   ? sessionStartHook(store, p, process.env.CLAUDE_CONFIG_DIR)
                   : rest[0] === 'session-end'
@@ -192,6 +195,17 @@ async function main(argv: string[]) {
       execFile('open', [
         `http://localhost:${port()}/${ref ? `?q=${encodeURIComponent(ref)}` : ''}`,
       ]);
+      return;
+    }
+    case 'cost': {
+      const at = rest.indexOf('--repo');
+      const repo = at >= 0 ? rest.splice(at, 2)[1] : undefined;
+      const since = new Date();
+      since.setHours(0, 0, 0, 0);
+      since.setDate(since.getDate() - Number(rest[0] ?? 14) + 1);
+      const store = new Store();
+      console.log(costTable(store.costs.days(since.getTime(), repo)));
+      store.close();
       return;
     }
     case 'prune': {

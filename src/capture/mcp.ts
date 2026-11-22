@@ -40,6 +40,10 @@ export function instructions(store: Store): string {
   return `${INSTRUCTIONS} The user marked these filed by mistake; don't file their like: ${list}.`;
 }
 
+/** What kouhai adds to every request's system prompt, its instructions and tool schemas, in characters. */
+export const fixedChars = (store: Store) =>
+  instructions(store).length + JSON.stringify(TOOLS).length;
+
 type Rpc = {
   jsonrpc: '2.0';
   id?: number | string;

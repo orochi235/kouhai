@@ -17,7 +17,7 @@
   tool schemas (about +180 tokens per request); the dropped rule was about 376 characters, injected
   on 91 of 252 prompts across this repo's transcripts. Around 2026-11-24, run
   `scripts/token-cost.mjs` with `--fixed $(scripts/fixed-cost.ts --chars)` on a week of sessions on
-  either side of the change, and check how often agents fill each field, what answering
+  either side of the change (turns since 2026-11-21 are also in `kouhai cost`), and check how often agents fill each field, what answering
   /btw questions costs (the request is 287 characters per question, plus the settle; about 0.7 a day
   going by history), and whether `session` scope
   is being judged well (archived answers that are needed later).

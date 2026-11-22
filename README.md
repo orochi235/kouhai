@@ -176,10 +176,25 @@ kouhai prune
 
 `~/.kouhai/inbox.db`, SQLite in WAL mode, readable only by you. Attachments are stored as
 references, never copies. An archived item is deleted 180 days after it was archived, unless
-pinned. Turns and the record of chased mid-turn messages are deleted after two days. The daemon
+pinned. Turns and the record of chased mid-turn messages are deleted after two days, and each
+turn's token cost after 180 days. The daemon
 prunes on start and daily; `kouhai prune` does it now. An adapter event leaves the outbox once
 delivered; one given up on is deleted 30 days later. The daemon logs to `~/.kouhai/daemon.log`.
 
-`scripts/fixed-cost.ts` prints what kouhai adds to every request (its instructions and tool
-schemas) and to each turn; `scripts/token-cost.mjs <transcript>... --fixed $(scripts/fixed-cost.ts --chars)`
-measures a session's share. Run both before and after a change to anything an agent reads.
+## What kouhai costs
+
+The Stop hook records what each turn cost, read from the API usage in the transcript: calls,
+uncached input, cache reads, cache writes (hour-long ones apart), and output. A subagent's run
+is added to the turn that started it. Beside those it estimates kouhai's part (at 4 characters
+a token): what its hook injections, tool calls, and results put into context, how often later
+calls re-read them along with its instructions and tool schemas, and the extra calls forced by a
+step that called only kouhai's tools. `kouhai cost [days] [--repo <name>]` prints a day per row.
+Its `extra` column is the figure to watch: kouhai's cost over the rest of the session's, each
+kind of token weighed by its API price relative to uncached input (`WEIGHTS` in
+`src/engine/meter.ts`, Opus 5.5's prices). A subscription's usage limits may weigh tokens
+differently.
+
+`scripts/fixed-cost.ts` prints what kouhai adds to every request and to each turn;
+`scripts/token-cost.mjs <transcript>... --fixed $(scripts/fixed-cost.ts --chars)` measures whole
+sessions the same way, including ones from before the hook. Run both before and after a change to
+anything an agent reads.

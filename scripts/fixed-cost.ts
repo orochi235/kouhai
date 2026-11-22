@@ -4,7 +4,7 @@
 // Run before and after a change to how kouhai talks to agents; pass `--chars` to feed
 // `token-cost.mjs --fixed`.
 import { REMINDER, RULE } from '../src/capture/hooks.ts';
-import { handle } from '../src/capture/mcp.ts';
+import { fixedChars, handle } from '../src/capture/mcp.ts';
 import { Store } from '../src/engine/store.ts';
 
 const s = new Store(':memory:');
@@ -18,7 +18,7 @@ const sizes = {
   'reminder (later turns)': REMINDER.length,
 };
 if (process.argv.includes('--chars')) {
-  console.log(sizes.instructions + sizes.tools);
+  console.log(fixedChars(s));
 } else {
   for (const [k, v] of Object.entries(sizes))
     console.log(

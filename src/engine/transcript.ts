@@ -6,7 +6,7 @@ const TAIL_BYTES = 4 * 1024 * 1024;
 
 export type MidTurn = { key: string; text: string };
 
-type Line = Record<string, unknown> & {
+export type Line = Record<string, unknown> & {
   type?: string;
   origin?: { kind?: string };
   message?: { content?: unknown };
@@ -39,7 +39,7 @@ function tail(path: string): Line[] {
   }
 }
 
-const isPrompt = (l: Line) =>
+export const isPrompt = (l: Line) =>
   l.type === 'user' && l.origin?.kind === 'human' && typeof l.message?.content === 'string';
 
 const isMidTurn = (l: Line) =>
