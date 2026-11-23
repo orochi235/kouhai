@@ -165,7 +165,7 @@ th {
   color: var(--ink-soft);
 }
 
-code,
+:not(pre) > code,
 td:first-child {
   white-space: nowrap;
 }
